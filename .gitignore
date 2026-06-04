@@ -3,3 +3,5 @@
 __pycache__/
 *.pyc
 books_cleaned.csv
+tagged_description.txt
+.env
