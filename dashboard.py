@@ -1,77 +1,13 @@
-import os
-import pandas as pd
-import numpy as np
-from dotenv import load_dotenv
-
-from langchain_community.document_loaders import TextLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import CharacterTextSplitter
-from langchain_chroma import Chroma
-
 import gradio as gr
 
-load_dotenv()
+from recommender import BookRecommender
 
-books = pd.read_csv("data/books_with_emotions.csv")
-
-books["large_thumbnail"] = books["thumbnail"] + "&fife=w800"
-books["large_thumbnail"] = np.where(
-    books["large_thumbnail"].isna(),
-    "assets/cover_NA.png",
-    books["large_thumbnail"],
-)
-
-
-if os.path.exists("data/chroma_db"):
-    # already built once — just load the saved vectors, no API calls
-    db_books = Chroma(persist_directory="data/chroma_db", embedding_function=OpenAIEmbeddings())
-else:
-    # first run — embed everything once, then save it
-    raw_documents = TextLoader("data/tagged_description.txt").load()
-    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
-    documents = text_splitter.split_documents(raw_documents)
-    db_books = Chroma.from_documents(
-        documents,
-        OpenAIEmbeddings(),
-        persist_directory="data/chroma_db"   # save the vectors to a folder
-    )
-
-
-def retrieve_semantic_recommendations(
-        query: str,
-        category: str = None,
-        tone: str = None,
-        initial_top_k: int = 50, 
-        final_top_k: int = 16,
-) -> pd.DataFrame:
-
-    recs = db_books.similarity_search(query, k=initial_top_k)
-    books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
-    book_recs = books[books["isbn13"].isin(books_list)].head(initial_top_k)
-
-    if category != "All":
-        book_recs = book_recs[book_recs["simple_categories"] == category].head(final_top_k)
-    else:
-        book_recs = book_recs.head(final_top_k)
-    
-    match tone:
-        case "Happy":
-            book_recs.sort_values(by="joy", ascending=False, inplace=True)
-        case "Surprising":
-            book_recs.sort_values(by="surprise", ascending=False, inplace=True)
-        case "Angry":
-            book_recs.sort_values(by="anger", ascending=False, inplace=True)
-        case "Suspenseful":
-            book_recs.sort_values(by="fear", ascending=False, inplace=True)
-        case "Sad":
-            book_recs.sort_values(by="sadness", ascending=False, inplace=True)
-
-    return book_recs
+recommender = BookRecommender.load()
 
 
 def recommend_books(query: str, category: str, tone: str):
 
-    recommendations = retrieve_semantic_recommendations(query, category, tone)
+    recommendations = recommender.recommend_from_query(query, category, tone)
     results = []
 
     for _, row in recommendations.iterrows():
@@ -90,11 +26,11 @@ def recommend_books(query: str, category: str, tone: str):
 
         caption = f"{row['title']} by {authors_str}: {truncated_description}"
         results.append((row["large_thumbnail"], caption))
-    
+
     return results
 
 
-categories = ["All"] + sorted(books["simple_categories"].unique())
+categories = recommender.categories
 tones = ["All"] + ["Happy", "Surprising", "Angry", "Suspenseful", "Sad"]
 
 with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
