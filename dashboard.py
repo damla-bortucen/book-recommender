@@ -12,28 +12,28 @@ import gradio as gr
 
 load_dotenv()
 
-books = pd.read_csv("books_with_emotions.csv")
+books = pd.read_csv("data/books_with_emotions.csv")
 
 books["large_thumbnail"] = books["thumbnail"] + "&fife=w800"
 books["large_thumbnail"] = np.where(
     books["large_thumbnail"].isna(),
-    "cover_NA.png",
+    "assets/cover_NA.png",
     books["large_thumbnail"],
 )
 
 
-if os.path.exists("chroma_db"):
+if os.path.exists("data/chroma_db"):
     # already built once — just load the saved vectors, no API calls
-    db_books = Chroma(persist_directory="chroma_db", embedding_function=OpenAIEmbeddings())
+    db_books = Chroma(persist_directory="data/chroma_db", embedding_function=OpenAIEmbeddings())
 else:
     # first run — embed everything once, then save it
-    raw_documents = TextLoader("tagged_description.txt").load()
+    raw_documents = TextLoader("data/tagged_description.txt").load()
     text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
     documents = text_splitter.split_documents(raw_documents)
     db_books = Chroma.from_documents(
-        documents, 
-        OpenAIEmbeddings(), 
-        persist_directory="chroma_db"   # save the vectors to a folder
+        documents,
+        OpenAIEmbeddings(),
+        persist_directory="data/chroma_db"   # save the vectors to a folder
     )
 
 
