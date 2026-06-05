@@ -2,7 +2,9 @@
 
 A semantic book recommendation engine that takes a natural-language prompt
 (e.g. *"A book to teach children about nature"*) and returns matching books
-by searching over their descriptions with vector embeddings.
+by searching over their descriptions with vector embeddings. Results can be
+narrowed by category (fiction / nonfiction) and re-ranked by emotional tone,
+all through an interactive Gradio dashboard.
 
 ### Dataset
 - Explored the [`dylanjcastillo/7k-books-with-metadata`](https://www.kaggle.com/datasets/dylanjcastillo/7k-books-with-metadata)
@@ -54,6 +56,23 @@ a desired mood (e.g. joyful vs sad).
 - merged the per-emotion scores back onto each book by `isbn13` and exported
   the result to `books_with_emotions.csv`.
 
+### Dashboard
+Built in `dashboard.py` — an interactive [Gradio](https://www.gradio.app/) app
+that brings the pieces above together:
+- Enter a free-text description of the kind of book you want.
+- Optionally filter by category (`simple_categories`) and pick an emotional
+  tone (Happy, Surprising, Angry, Suspenseful, Sad), which re-ranks results by
+  the matching emotion score.
+- `retrieve_semantic_recommendations()` runs the Chroma similarity search, then
+  applies the category filter and tone sort; `recommend_books()` renders the
+  results as a thumbnail gallery with truncated descriptions and formatted
+  author lists (falling back to `cover_NA.png` when a book has no thumbnail).
+
+Run it with:
+```bash
+python dashboard.py
+```
+
 
 ## Tech stack
 - **Python 3.12**
@@ -61,6 +80,8 @@ a desired mood (e.g. joyful vs sad).
 - **LangChain** (`langchain-chroma`, `langchain-community`, `langchain-openai`)
 - **Chroma** — vector store
 - **OpenAI embeddings** — semantic search
+- **transformers / torch** — zero-shot & emotion classification (Hugging Face)
+- **Gradio** — interactive dashboard
 - **kagglehub** — dataset download
 - **seaborn / matplotlib** — exploratory plots
 
@@ -69,12 +90,27 @@ a desired mood (e.g. joyful vs sad).
    ```bash
    pip install -r requirements.txt
    ```
-2. Create a `.env` file in the project root with your OpenAI key:
+2. Create a `.env` file in the project root with your API keys:
    ```
    OPENAI_API_KEY=sk-...
+   HF_TOKEN=hf_...
    ```
+   (`OPENAI_API_KEY` powers the embeddings; `HF_TOKEN` is used for the
+   Hugging Face classification models.)
+3. The notebooks write intermediate datasets (`books_cleaned.csv`,
+   `books_with_categories.csv`, `books_with_emotions.csv`, `tagged_description.txt`)
+   that are gitignored. Run the notebooks in order — `7k_data_exploration` →
+   `vector_search` → `text_classification` → `sentiment_analysis` — to
+   regenerate them before launching the dashboard.
 
-## Plan
+## Future Improvements
 - semantic book recommendations
-- book recommendations based on chosen book/books
+- improve UI
+- host on the web?
+- save books functionality
+- more emotions?
+- book recommendations based on 3 chosen books
 - more recent and bigger dataset
+
+###### Acknowledgments
+["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw)
