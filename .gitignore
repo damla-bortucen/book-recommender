@@ -2,6 +2,11 @@
 .idea/
 __pycache__/
 *.pyc
+
 books_cleaned.csv
+books_with_categories.csv
+
 tagged_description.txt
 .env
+
+CLAUDE.md
