@@ -5,6 +5,7 @@ __pycache__/
 
 books_cleaned.csv
 books_with_categories.csv
+books_with_emotions.csv
 
 tagged_description.txt
 .env
