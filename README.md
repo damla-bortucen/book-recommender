@@ -56,17 +56,24 @@ a desired mood (e.g. joyful vs sad).
 - merged the per-emotion scores back onto each book by `isbn13` and exported
   the result to `books_with_emotions.csv`.
 
-### Dashboard
-Built in `dashboard.py` — an interactive [Gradio](https://www.gradio.app/) app
-that brings the pieces above together:
-- Enter a free-text description of the kind of book you want.
-- Optionally filter by category (`simple_categories`) and pick an emotional
-  tone (Happy, Surprising, Angry, Suspenseful, Sad), which re-ranks results by
-  the matching emotion score.
-- `retrieve_semantic_recommendations()` runs the Chroma similarity search, then
-  applies the category filter and tone sort; `recommend_books()` renders the
-  results as a thumbnail gallery with truncated descriptions and formatted
-  author lists (falling back to `cover_NA.png` when a book has no thumbnail).
+### Recommendation Engine & Dashboard
+The recommendation logic and the UI are kept separate:
+
+- **`recommender.py`** holds the `BookRecommender` engine. `BookRecommender.load()`
+  reads `data/books_with_emotions.csv` and builds (or loads) the persisted Chroma
+  store, so all disk/API I/O lives in one place and the engine can be used without
+  the dashboard. `recommend_from_query()` runs the Chroma similarity search, then
+  applies the category filter and emotional-tone sort, returning a DataFrame.
+
+- **`dashboard.py`** is an interactive [Gradio](https://www.gradio.app/) app that
+  drives the engine:
+  - Enter a free-text description of the kind of book you want.
+  - Optionally filter by category (`simple_categories`) and pick an emotional
+    tone (Happy, Surprising, Angry, Suspenseful, Sad), which re-ranks results by
+    the matching emotion score.
+  - `recommend_books()` calls the engine and renders the results as a thumbnail
+    gallery with truncated descriptions and formatted author lists (falling back
+    to `assets/cover_NA.png` when a book has no thumbnail).
 
 Run it with:
 ```bash
