@@ -40,6 +40,20 @@ Used in `text_classification.ipynb` to give every book a simple category (fictio
 The data proved too sparse to reliably classify finer genres (romance, sci-fi,
 fantasy, etc.) beyond the Fiction/Nonfiction split.
 
+### Emotion Classification (Sentiment Analysis)
+Used in `sentiment_analysis.ipynb` to give every book an emotional profile, so recommendations can later be tuned to 
+a desired mood (e.g. joyful vs sad).
+- used a Hugging Face `text-classification` pipeline
+  (`j-hartmann/emotion-english-distilroberta-base`) to score descriptions
+  across the six Ekman emotions plus neutral (`anger`, `disgust`, `fear`,
+  `joy`, `sadness`, `surprise`, `neutral`).
+- classified each description **sentence by sentence** rather than as a whole,
+  since a single book description often spans several emotions.
+- kept the **maximum score per emotion** across a description's sentences, via
+  `calculate_max_emotion_scores(predictions)`.
+- merged the per-emotion scores back onto each book by `isbn13` and exported
+  the result to `books_with_emotions.csv`.
+
 
 ## Tech stack
 - **Python 3.12**
