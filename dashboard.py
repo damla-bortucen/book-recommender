@@ -22,11 +22,6 @@ books["large_thumbnail"] = np.where(
 )
 
 
-# from vector_search.ipynb
-raw_documents = TextLoader("tagged_description.txt").load()
-text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
-documents = text_splitter.split_documents(raw_documents)
-
 if os.path.exists("chroma_db"):
     # already built once — just load the saved vectors, no API calls
     db_books = Chroma(persist_directory="chroma_db", embedding_function=OpenAIEmbeddings())
