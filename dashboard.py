@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
@@ -25,7 +26,20 @@ books["large_thumbnail"] = np.where(
 raw_documents = TextLoader("tagged_description.txt").load()
 text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
 documents = text_splitter.split_documents(raw_documents)
-db_books = Chroma.from_documents(documents, OpenAIEmbeddings())
+
+if os.path.exists("chroma_db"):
+    # already built once — just load the saved vectors, no API calls
+    db_books = Chroma(persist_directory="chroma_db", embedding_function=OpenAIEmbeddings())
+else:
+    # first run — embed everything once, then save it
+    raw_documents = TextLoader("tagged_description.txt").load()
+    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
+    documents = text_splitter.split_documents(raw_documents)
+    db_books = Chroma.from_documents(
+        documents, 
+        OpenAIEmbeddings(), 
+        persist_directory="chroma_db"   # save the vectors to a folder
+    )
 
 
 def retrieve_semantic_recommendations(
