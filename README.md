@@ -97,11 +97,15 @@ python dashboard.py
    ```
    (`OPENAI_API_KEY` powers the embeddings; `HF_TOKEN` is used for the
    Hugging Face classification models.)
-3. The notebooks write intermediate datasets (`books_cleaned.csv`,
-   `books_with_categories.csv`, `books_with_emotions.csv`, `tagged_description.txt`)
-   that are gitignored. Run the notebooks in order — `7k_data_exploration` →
-   `vector_search` → `text_classification` → `sentiment_analysis` — to
-   regenerate them before launching the dashboard.
+3. The notebooks (in `notebooks/`) write intermediate datasets to `data/`
+   (`books_cleaned.csv`, `books_with_categories.csv`, `books_with_emotions.csv`,
+   `tagged_description.txt`) that are gitignored. Run them in order —
+   `7k_data_exploration` → `text_classification` → `sentiment_analysis` →
+   `vector_search` — to regenerate everything before launching the dashboard.
+4. Launch the dashboard from the project root:
+   ```bash
+   python dashboard.py
+   ```
 
 ## Future Improvements
 - semantic book recommendations
