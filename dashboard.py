@@ -48,20 +48,21 @@ css = """
 .book-picker input { padding-right: 2.2rem !important; text-overflow: ellipsis; }
 """
 
-with gr.Blocks(theme = gr.themes.Glass(), css = css) as dashboard:
+with gr.Blocks(theme = gr.themes.Base(), css = css) as dashboard:
     gr.Markdown("# Semantic book recommender")
 
     with gr.Tab("Search by description"):
         with gr.Row():
             user_query = gr.Textbox(label = "Please enter a description of a book:",
-                                    placeholder = "e.g., A story about forgiveness")
-            category_dropdown = gr.Dropdown(choices = categories, label = "Select a category:", value = "All")
-            tone_dropdown = gr.Dropdown(choices = tones, label = "Select an emotional tone:", value = "All")
-            submit_button = gr.Button("Find recommendations")
+                                    placeholder = "e.g., A story about forgiveness", scale=2)
+            category_dropdown = gr.Dropdown(choices = categories, label = "Select a category:", value = "All", scale=1)
+            tone_dropdown = gr.Dropdown(choices = tones, label = "Select an emotional tone:", value = "All", scale=1)
+            submit_button = gr.Button("Find recommendations", scale=1)
 
         gr.Markdown("## Recommendations")
-        output = gr.Gallery(label = "Recommended books", columns = 8, rows = 2)
+        output = gr.Gallery(label="Recommended books", columns=5, rows=2, height="auto", object_fit="contain")
 
+        #user_query.submit(fn=recommend_books, inputs=[...], outputs=output)
         submit_button.click(fn = recommend_books,
                             inputs = [user_query, category_dropdown, tone_dropdown],
                             outputs = output)
