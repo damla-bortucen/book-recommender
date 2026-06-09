@@ -65,6 +65,16 @@ class BookRecommender:
         """
         return ["All"] + sorted(self.books["simple_categories"].unique())
 
+    @property
+    def book_choices(self) -> list:
+        """
+        (label, isbn13) pairs for the book-picker dropdowns. The label is
+        shown to the user; the isbn13 value is what gets passed back to
+        recommend_from_books.
+        """
+        rows = self.books.sort_values("title")
+        return [(f"{row.title} by {row.authors}", row.isbn13) for row in rows.itertuples()]
+
     def recommend_from_query(
             self,
             query: str,
@@ -109,7 +119,12 @@ class BookRecommender:
         Averages the picks' embeddings, searches, drops the picks, and keeps
         only books whose simple_categories matches one of the picks'.
         """
-        
+
+        picks = [p for p in picks if p]            # drop blank dropdowns
+        picks = list(dict.fromkeys(picks))         # drop duplicate picks, keep order
+        if not picks:
+            return self.books.head(0)              # nothing chosen -> empty result
+
         selected = self.books[self.books["isbn13"].isin(picks)]
         allowed_categories = set(selected["simple_categories"])
 
