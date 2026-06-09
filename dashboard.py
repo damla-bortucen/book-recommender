@@ -43,7 +43,12 @@ categories = recommender.categories
 tones = ["All"] + ["Happy", "Surprising", "Angry", "Suspenseful", "Sad"]
 book_choices = recommender.book_choices
 
-with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
+# keep the long "Title by Author" text from sliding under the dropdown's chevron
+css = """
+.book-picker input { padding-right: 2.2rem !important; text-overflow: ellipsis; }
+"""
+
+with gr.Blocks(theme = gr.themes.Glass(), css = css) as dashboard:
     gr.Markdown("# Semantic book recommender")
 
     with gr.Tab("Search by description"):
@@ -65,10 +70,10 @@ with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
     with gr.Tab("Find by 3 books"):
         gr.Markdown("Pick three books you like and get a recommendation in the same vein.")
         with gr.Row():
-            book1_dropdown = gr.Dropdown(choices = book_choices, label = "Book 1")
-            book2_dropdown = gr.Dropdown(choices = book_choices, label = "Book 2")
-            book3_dropdown = gr.Dropdown(choices = book_choices, label = "Book 3")
-            find_button = gr.Button("Find a book based on these")
+            book1_dropdown = gr.Dropdown(choices = book_choices, label = "Book 1", elem_classes = "book-picker")
+            book2_dropdown = gr.Dropdown(choices = book_choices, label = "Book 2", elem_classes = "book-picker")
+            book3_dropdown = gr.Dropdown(choices = book_choices, label = "Book 3", elem_classes = "book-picker")
+        find_button = gr.Button("Find a book based on these")
 
         gr.Markdown("## Recommendations")
         selection_output = gr.Gallery(label = "Recommended books", columns = 8, rows = 2)
