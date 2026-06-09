@@ -62,6 +62,14 @@ with gr.Blocks(theme=gr.themes.Base(), css=css) as dashboard:
             tone_dropdown = gr.Dropdown(choices = tones, label = "Select an emotional tone:", value = "All", scale=1)
             submit_button = gr.Button("Find recommendations", variant="primary", scale=1)
 
+        gr.Examples(
+            examples = ["A book to teach children about nature",
+                        "A story about forgiveness",
+                        "A thrilling space adventure",
+                        "An uplifting memoir about overcoming adversity"],
+            inputs = user_query,
+        )
+
         gr.Markdown("## Recommendations")
         output = gr.Gallery(label="Recommended books", columns=5, rows=2, height="auto", object_fit="contain")
 
@@ -76,7 +84,7 @@ with gr.Blocks(theme=gr.themes.Base(), css=css) as dashboard:
             book1_dropdown = gr.Dropdown(choices=book_choices, label="Book 1", elem_classes="book-picker")
             book2_dropdown = gr.Dropdown(choices=book_choices, label="Book 2", elem_classes="book-picker")
             book3_dropdown = gr.Dropdown(choices=book_choices, label="Book 3", elem_classes="book-picker")
-        find_button = gr.Button("Find a book based on these")
+        find_button = gr.Button("Find a book based on these", variant="primary")
 
         gr.Markdown("## Recommendations")
         selection_output = gr.Gallery(label="Recommended books", columns=8, rows=2)
