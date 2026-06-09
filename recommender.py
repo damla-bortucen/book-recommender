@@ -88,7 +88,7 @@ class BookRecommender:
         books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
         
         rank = {isbn: i for i, isbn in enumerate(books_list)}
-        book_recs = self.books[self.books["isbn13"].isin(books_list)].copy() # reorders rows in the DataFrame's original row order
+        book_recs = self.books[self.books["isbn13"].isin(books_list)].copy() # isin keeps DataFrame order, not similarity order
         # use rank to preserve similarity order (Chroma returns nearest first)
         book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
 
