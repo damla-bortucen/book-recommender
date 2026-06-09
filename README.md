@@ -3,8 +3,9 @@
 A semantic book recommendation engine that takes a natural-language prompt
 (e.g. *"A book to teach children about nature"*) and returns matching books
 by searching over their descriptions with vector embeddings. Results can be
-narrowed by category (fiction / nonfiction) and re-ranked by emotional tone,
-all through an interactive Gradio dashboard.
+narrowed by category (fiction / nonfiction) and re-ranked by emotional tone.
+You can also pick three books you like and get a recommendation in the same
+vein — all through an interactive Gradio dashboard.
 
 ### Dataset
 - Explored the [`dylanjcastillo/7k-books-with-metadata`](https://www.kaggle.com/datasets/dylanjcastillo/7k-books-with-metadata)
@@ -64,6 +65,9 @@ The recommendation logic and the UI are kept separate:
   store, so all disk/API I/O lives in one place and the engine can be used without
   the dashboard. `recommend_from_query()` runs the Chroma similarity search, then
   applies the category filter and emotional-tone sort, returning a DataFrame.
+  `recommend_from_books()` takes three chosen books, averages their description
+  embeddings into a single "taste" vector, searches with it, drops the picks from
+  the results, and keeps only books whose `simple_categories` match the picks'.
 
 - **`dashboard.py`** is an interactive [Gradio](https://www.gradio.app/) app that
   drives the engine:
@@ -74,6 +78,9 @@ The recommendation logic and the UI are kept separate:
   - `recommend_books()` calls the engine and renders the results as a thumbnail
     gallery with truncated descriptions and formatted author lists (falling back
     to `assets/cover_NA.png` when a book has no thumbnail).
+  - A second **"Find by 3 books"** tab lets you pick three books from searchable
+    dropdowns; `recommend_from_selection()` passes them to the engine and renders
+    the same thumbnail gallery.
 
 Run it with:
 ```bash
@@ -120,7 +127,6 @@ python dashboard.py
 - host on the web?
 - save books functionality
 - more emotions?
-- book recommendations based on 3 chosen books
 - more recent and bigger dataset
 
 ###### Acknowledgments
