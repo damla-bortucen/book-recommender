@@ -86,7 +86,11 @@ class BookRecommender:
 
         recs = self.db_books.similarity_search(query, k=initial_top_k)
         books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
-        book_recs = self.books[self.books["isbn13"].isin(books_list)].head(initial_top_k)
+        
+        rank = {isbn: i for i, isbn in enumerate(books_list)}
+        book_recs = self.books[self.books["isbn13"].isin(books_list)].copy() # reorders rows in the DataFrame's original row order
+        # use rank to preserve similarity order (Chroma returns nearest first)
+        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
 
         if category != "All":
             book_recs = book_recs[book_recs["simple_categories"] == category].head(final_top_k)
@@ -133,8 +137,10 @@ class BookRecommender:
         recs = self.db_books.similarity_search_by_vector(avg, k=initial_top_k)
         isbns = [int(r.page_content.strip('"').split()[0]) for r in recs]
 
-        book_recs = self.books[self.books["isbn13"].isin(isbns)]
-        book_recs = book_recs[~book_recs["isbn13"].isin(picks)]                          
+        rank = {isbn: i for i, isbn in enumerate(isbns)}
+        book_recs = self.books[self.books["isbn13"].isin(isbns)].copy()
+        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
+        book_recs = book_recs[~book_recs["isbn13"].isin(picks)]
         book_recs = book_recs[book_recs["simple_categories"].isin(allowed_categories)]  
         
         return book_recs.head(final_top_k)
