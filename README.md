@@ -122,11 +122,8 @@ python dashboard.py
    ```
 
 ## Future Improvements
-- semantic book recommendations
+- evaluation of performance
 - improve UI
-- host on the web?
-- save books functionality
-- more emotions?
 - more recent and bigger dataset
 
 ###### Acknowledgments

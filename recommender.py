@@ -81,7 +81,7 @@ class BookRecommender:
             category: str = None,
             tone: str = None,
             initial_top_k: int = 50,
-            final_top_k: int = 16,
+            final_top_k: int = 15,
     ) -> pd.DataFrame:
 
         recs = self.db_books.similarity_search(query, k=initial_top_k)
@@ -116,7 +116,7 @@ class BookRecommender:
             self, 
             picks: list, 
             initial_top_k: int = 50,
-            final_top_k: int = 16,
+            final_top_k: int = 15,
     ):
         """
         Recommend books based on a list of picked isbn13s.
