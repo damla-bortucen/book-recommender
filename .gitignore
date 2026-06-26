@@ -9,6 +9,7 @@ data/books_cleaned.csv
 data/books_with_categories.csv
 data/books_with_emotions.csv
 data/tagged_description.txt
+data/open_library/
 
 .env
 
