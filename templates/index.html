@@ -34,12 +34,44 @@
     <hr>
     <h3>Or find books like ones you love</h3>
 
-    <input type="search" name="q" placeholder="Search for a book by title..."
+    <input type="search" id="book-q" name="q" placeholder="Search for a book by title..."
         hx-get="/book-search"
-        hx-trigger="keyup changed delay:300ms" 
+        hx-trigger="keyup changed delay:300ms"
         hx-target="#book-options">
-
     <div id="book-options"></div>
+
+    <form id="books-form" hx-post="/recommend-from-books" hx-target="#results" hx-swap="innerHTML">
+        <div id="chips"></div>
+        <button type="submit">Find similar</button>
+    </form>
+
+
+  <script>
+    const booksForm = document.getElementById('books-form');
+    const chips = document.getElementById('chips');
+
+    document.getElementById('book-options').addEventListener('click', function (e) {
+        const opt = e.target.closest('.option');
+        if (opt) addPick(opt.dataset.isbn, opt.dataset.label);
+    });
+
+    function addPick(isbn, label) {
+        const picks = booksForm.querySelectorAll('input[name="picks"]');
+        if (picks.length >= 3) return; // max 3
+        if (booksForm.querySelector('input[name="picks"][value="' + isbn + '"]')) return; // no dupes
+
+        const hidden = document.createElement('input'); // remembered for submit
+        hidden.type = 'hidden';
+        hidden.name = 'picks';
+        hidden.value = isbn;
+        booksForm.appendChild(hidden);
+
+        const chip = document.createElement('span'); // visible to the user
+        chip.className = 'chip';
+        chip.textContent = label;
+        chips.appendChild(chip);
+    }
+  </script>
 
   </body>
 </html>

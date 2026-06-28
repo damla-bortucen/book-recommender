@@ -44,6 +44,7 @@ def search(
         {"books": results.to_dict("records")},
     )
 
+
 @app.get("/book-search")
 def book_search(request: Request, q: str = ""):
     matches = recommender.search_titles(q)
@@ -51,6 +52,16 @@ def book_search(request: Request, q: str = ""):
         request,
         "_book_options.html",
         {"matches": matches},
+    )
+
+
+@app.post("/recommend-from-books")
+def find_similar(request: Request, picks: list[int] = Form([])):
+    results = recommender.recommend_from_books(picks)
+    return templates.TemplateResponse(
+        request,
+        "_results.html",
+        {"books": results.to_dict("records")},
     )
 
 # run with uvicorn app:app --reload (reload makes server autostart when you make a change)
