@@ -2,9 +2,20 @@
 <html>
   <head>
     <title>{{ title }}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   </head>
   <body>
     <h1>{{ title }}</h1>
-    <p>{{ tagline }}</p>
+    <h3>{{ tagline }}</h3>
+
+    <p>Searching across {{ book_count }} books.</p>
+
+    <form hx-post="/search" hx-target="#results" hx-swap="innerHTML">
+        <input type="text" name="query" placeholder="Describe a book you'd like...">
+        <button type="submit">Search</button>
+    </form>
+
+    <div id="results"></div>
+
   </body>
 </html>

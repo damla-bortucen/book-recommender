@@ -82,7 +82,7 @@ class BookRecommender:
             category: str = None,
             tone: str = None,
             initial_top_k: int = 50,
-            final_top_k: int = 15,
+            final_top_k: int = 8,
     ) -> pd.DataFrame:
 
         recs = self.db_books.similarity_search(query, k=initial_top_k)
