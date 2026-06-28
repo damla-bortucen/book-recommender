@@ -12,6 +12,19 @@
 
     <form hx-post="/search" hx-target="#results" hx-swap="innerHTML">
         <input type="text" name="query" placeholder="Describe a book you'd like...">
+
+        <select name="category">
+            {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="tone">
+            {% for t in tones %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+
         <button type="submit">Search</button>
     </form>
 
