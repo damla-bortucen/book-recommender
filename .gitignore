@@ -14,3 +14,5 @@ data/open_library/
 .env
 
 CLAUDE.md
+
+run_overnight.log
