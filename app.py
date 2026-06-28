@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from recommender import BookRecommender
 
 app = FastAPI() # the application object
-
 # tell FastAPI where the template files live
 templates = Jinja2Templates(directory="templates")
+
+app.mount("/assets", StaticFiles(directory="assets"), name="assets") # makes cover_NA.png reachable from browser
 
 recommender = BookRecommender.load()
 

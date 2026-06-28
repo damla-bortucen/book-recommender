@@ -1,8 +1,16 @@
 {% for book in books %}
     <article>
-        <img src="{{ book.large_thumbnail }}" alt="cover" width="100">
+        <img src="{{ book.large_thumbnail }}" alt="cover" width="100"
+            onerror="this.onerror=null; this.src='/assets/cover_NA.png';">
         <h3>{{ book.title }}</h3>
-        <p>{{ book.authors }}</p>
+
+        {% if book.authors is string %}
+            <p><em>{{ book.authors.replace(";", ", ") }}</em></p>
+        {% else %}
+            <p><em>Unknown author</em></p>
+        {% endif %}
+
+        <p>{{ book.description | truncate(220) }}</p>
     </article>
 {% else %}
     <p>No matches found.</p>
