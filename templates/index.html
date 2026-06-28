@@ -49,10 +49,11 @@
             hx-get="/book-search"
             hx-trigger="keyup changed delay:300ms"
             hx-target="#book-options"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
         <div id="book-options" class="space-y-1"></div>
 
         <form id="books-form" hx-post="/recommend-from-books" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML" class="space-y-3">
+            <p id="pick-count" class="text-sm text-gray-500">0 / 3 selected</p>
             <div id="chips" class="flex flex-wrap gap-2"></div>
             <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Find similar</button>
         </form>
@@ -61,11 +62,19 @@
         <script>
             const booksForm = document.getElementById('books-form');
             const chips = document.getElementById('chips');
+            const bookInput = document.getElementById('book-q');
+            const pickCount = document.getElementById('pick-count');
 
             document.getElementById('book-options').addEventListener('click', function (e) {
                 const opt = e.target.closest('.option');
                 if (opt) addPick(opt.dataset.isbn, opt.dataset.label);
             });
+
+            function updateFeedback() {
+                const n = booksForm.querySelectorAll('input[name="picks"]').length;
+                pickCount.textContent = n + ' / 3 selected';
+                bookInput.disabled = n >= 3; // disable the box at the limit
+            }
 
             function addPick(isbn, label) {
                 const picks = booksForm.querySelectorAll('input[name="picks"]');
@@ -97,8 +106,10 @@
                 chip.remove();     // remove the visible chip
                 });
                 chip.appendChild(remove);
+                updateFeedback();
 
                 chips.appendChild(chip);
+                updateFeedback();
             }
         </script>
 
