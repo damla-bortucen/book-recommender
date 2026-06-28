@@ -3,19 +3,29 @@
 A semantic book recommendation engine that takes a natural-language prompt
 (e.g. *"A book to teach children about nature"*) and returns matching books
 by searching over their descriptions with vector embeddings. Results can be
-narrowed by category (fiction / nonfiction) and re-ranked by emotional tone.
+narrowed by category (fiction / nonfiction / children's) and re-ranked by
+emotional tone.
 You can also pick three books you like and get a recommendation in the same
 vein — all through an interactive Gradio dashboard.
 
 ### Dataset
-- Explored the [`dylanjcastillo/7k-books-with-metadata`](https://www.kaggle.com/datasets/dylanjcastillo/7k-books-with-metadata)
-  dataset in `7k_data_exploration.ipynb`.
-- Kept only books with descriptions of **≥ 20 words** to ensure enough
-  signal for embeddings.
-- Combined `title` and `subtitle` into a single `title_and_subtitle` field.
-- Built a `tagged_description` field by prefixing each description with its
-  `isbn13`, so a description can later be mapped back to a specific book.
-- Exported the result to `books_cleaned.csv`.
+The recommender is built on [Open Library](https://openlibrary.org/developers/dumps)'s
+monthly bulk data dumps, chosen over the earlier Kaggle/Google Books spikes to get a
+larger, more recent catalogue. Built in `open_library_data_exploration.ipynb`, which
+streams the multi-GB dumps line by line (they're far too big to load into memory):
+- **Editions dump** — keep editions that are in **English**, published **2018 or later**,
+  and have an ISBN-13. Each is keyed by its work, capturing title, subtitle, year, page
+  count, cover id, and author keys.
+- **Works dump** — descriptions and subjects live on the *work*, not the edition, so this
+  pass fills them in (only ~2% of editions have a usable description, which is why ~5M
+  editions distil down to ~100k books).
+- **Authors dump** — editions only store author *keys*, so this resolves them to names.
+- **Assembly** — clean the description text (strip markdown/HTML, normalise whitespace),
+  keep only descriptions of **≥ 20 words**, dedupe by ISBN-13, and combine `title` +
+  `subtitle` into `title_and_subtitle`. A `tagged_description` field prefixes each
+  description with its `isbn13` so a search hit can be mapped back to a specific book.
+- Exported the result (~100k books) to `books_cleaned.csv`. Note: Open Library's dumps
+  carry no ratings, so `average_rating` is left blank.
 
 ### Vector Search & Recommendations
 Built in `vector_search.ipynb`:
@@ -23,25 +33,30 @@ Built in `vector_search.ipynb`:
 - Loaded the text with LangChain's `TextLoader` and split it per-line with
   `CharacterTextSplitter` so each book is its own document.
 - Embedded the documents with OpenAI embeddings and stored them in a **Chroma**
-  vector store.
+  vector store, persisted to `data/chroma_db/` so the dashboard and notebooks
+  share one on-disk store.
 - Added `get_semantic_recommendation(query)`, which:
   - embeds the query into the same vector space as the book descriptions,
   - runs a similarity search to find the nearest descriptions,
   - recovers each result's `isbn13` from its tagged description,
   - looks those up in the dataframe to return full book records.
 
-### Zero-shot Text Classification
-Zero-shot models can sort pieces of text into particular categories without having been explicitly trained to do so. 
-
-Used in `text_classification.ipynb` to give every book a simple category (fiction vs nonfiction).
-- used a Hugging Face `zero-shot-classification` pipeline
-  (`facebook/bart-large-mnli`) to predict `Fiction` vs `Nonfiction` from a
-  book's description, via `generate_predictions(sequence, categories)`.
-- filled in `simple_categories` for books
+### Text Classification
+Used in `text_classification.ipynb` to give every book a simple category —
+`Fiction`, `Nonfiction`, or `Children's`:
+- **Keyword mapping first.** Open Library packs many messy subjects into one string
+  (e.g. `"Fiction;Radio broadcasters in fiction;..."`), so `simplify_categories()`
+  scans them for keywords: a `juvenile`/`children` signal maps to `Children's`,
+  otherwise explicit fiction/nonfiction labels and a set of genre hints decide
+  `Fiction` vs `Nonfiction`. (Children's is kept as one bucket — the fiction/nonfiction
+  sub-split was too sparse and noisy to be useful.)
+- **Zero-shot backfill.** For the minority of books the keyword mapping can't place, a
+  Hugging Face `zero-shot-classification` pipeline (`facebook/bart-large-mnli`) predicts
+  `Fiction` vs `Nonfiction` from the description, via `generate_predictions(sequence, categories)`.
 - exported the labelled dataset to `books_with_categories.csv`.
 
 The data proved too sparse to reliably classify finer genres (romance, sci-fi,
-fantasy, etc.) beyond the Fiction/Nonfiction split.
+fantasy, etc.) beyond this split.
 
 ### Emotion Classification (Sentiment Analysis)
 Used in `sentiment_analysis.ipynb` to give every book an emotional profile, so recommendations can later be tuned to 
@@ -96,7 +111,7 @@ python dashboard.py
 - **OpenAI embeddings** — semantic search
 - **transformers / torch** — zero-shot & emotion classification (Hugging Face)
 - **Gradio** — interactive dashboard
-- **kagglehub** — dataset download
+- **Open Library bulk dumps** — source catalogue (editions / works / authors)
 - **seaborn / matplotlib** — exploratory plots
 
 ## Setup
@@ -111,20 +126,26 @@ python dashboard.py
    ```
    (`OPENAI_API_KEY` powers the embeddings; `HF_TOKEN` is used for the
    Hugging Face classification models.)
-3. The notebooks (in `notebooks/`) write intermediate datasets to `data/`
+3. Download the [Open Library data dumps](https://openlibrary.org/developers/dumps)
+   (editions, works, authors) — and the ratings dump if you want it later —
+   decompress them, and place them in `data/open_library/` (the notebook expects
+   filenames like `ol_dump_editions_2026-05-31.txt`; update the dates in
+   `open_library_data_exploration.ipynb` to match the dump you downloaded).
+4. The notebooks (in `notebooks/`) write intermediate datasets to `data/`
    (`books_cleaned.csv`, `books_with_categories.csv`, `books_with_emotions.csv`,
    `tagged_description.txt`) that are gitignored. Run them in order —
-   `7k_data_exploration` → `text_classification` → `sentiment_analysis` →
+   `open_library_data_exploration` → `text_classification` → `sentiment_analysis` →
    `vector_search` — to regenerate everything before launching the dashboard.
-4. Launch the dashboard from the project root:
+5. Launch the dashboard from the project root:
    ```bash
    python dashboard.py
    ```
 
 ## Future Improvements
 - evaluation of performance
-- improve UI
-- more recent and bigger dataset
+- improve UI (incl. a searchable book picker that scales to the ~100k-book catalogue)
+- improve category accuracy and add finer genres
+- backfill ratings from Open Library's ratings dump
 
 ###### Acknowledgments
 ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw)

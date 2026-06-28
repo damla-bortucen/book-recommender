@@ -30,11 +30,12 @@ class BookRecommender:
 
         books = pd.read_csv(os.path.join(data_dir, "books_with_emotions.csv"))
 
-        books["large_thumbnail"] = books["thumbnail"] + "&fife=w800"
+        # Open Library cover URLs already encode size via the "-L" suffix, so no sizing
+        # param is needed; fall back to the bundled placeholder when there's no cover.
         books["large_thumbnail"] = np.where(
-            books["large_thumbnail"].isna(),
+            books["thumbnail"].isna(),
             os.path.join(assets_dir, "cover_NA.png"),
-            books["large_thumbnail"],
+            books["thumbnail"],
         )
 
         # one embeddings client backs both the vector store and recommend_from_books,
