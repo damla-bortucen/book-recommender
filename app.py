@@ -1,20 +1,18 @@
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI() # the application object
 # the server (uvicorn) runs THIS object.
 
-@app.get("/", response_class=HTMLResponse)
-def home():
-    return """
-    <!doctype html>
-    <html>
-      <head><title>Book Recommender</title></head>
-      <body>
-        <h1>Book Recommender</h1>
-        <p>The server is alive!</p>
-      </body>
-    </html>
-    """
+# tell FastAPI where the template files live
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/")
+def home(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {"title": "Book Recommender", "tagline": "Find your next read by describing it."}
+    )
 
 # run with uvicorn app:app --reload (reload makes server autostart when you make a change)
