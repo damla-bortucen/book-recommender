@@ -44,4 +44,13 @@ def search(
         {"books": results.to_dict("records")},
     )
 
+@app.get("/book-search")
+def book_search(request: Request, q: str = ""):
+    matches = recommender.search_titles(q)
+    return templates.TemplateResponse(
+        request,
+        "_book_options.html",
+        {"matches": matches},
+    )
+
 # run with uvicorn app:app --reload (reload makes server autostart when you make a change)

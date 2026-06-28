@@ -145,3 +145,13 @@ class BookRecommender:
         book_recs = book_recs[book_recs["simple_categories"].isin(allowed_categories)]  
         
         return book_recs.head(final_top_k)
+
+    def search_titles(self, query: str, limit: int = 8):
+        """
+        Find books whose titles contain the query
+        """
+        if not query.strip():
+            return []
+        mask = self.books["title"].str.contains(query, case=False, na=False, regex=False)
+        hits = self.books[mask].head(limit)
+        return hits[["isbn13", "title", "authors"]].to_dict("records")

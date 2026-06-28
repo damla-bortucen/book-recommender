@@ -31,5 +31,15 @@
     <br>
     <div id="results"></div>
 
+    <hr>
+    <h3>Or find books like ones you love</h3>
+
+    <input type="search" name="q" placeholder="Search for a book by title..."
+        hx-get="/book-search"
+        hx-trigger="keyup changed delay:300ms" 
+        hx-target="#book-options">
+
+    <div id="book-options"></div>
+
   </body>
 </html>

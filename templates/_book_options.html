@@ -1,0 +1,7 @@
+{% for book in matches %}
+    <div class="option">
+        {{ book.title }}{% if book.authors is string %} — {{ book.authors.replace(";", ", ") }}{% endif %}
+    </div>
+{% else %}
+    {% if matches is defined %}{% endif %}
+{% endfor %}
