@@ -23,7 +23,7 @@ class BookRecommender:
         self.embeddings = embeddings
 
     @classmethod    # classmethod can be called on a class without having an instance yet
-    def load(cls, data_dir: str = "data", assets_dir: str = "assets") -> "BookRecommender":
+    def load(cls, data_dir: str = "data", assets_dir: str = "/static/img") -> "BookRecommender":
         """
         Load the dataframe and build/load the persisted vector store.
         All disk/API I/O lives here so importing this module has no side effects.
