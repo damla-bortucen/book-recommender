@@ -1,7 +1,7 @@
 {% for book in books %}
     <article  class="rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition">
         <img src="{{ book.large_thumbnail }}" alt="cover" width="100"
-            onerror="this.onerror=null; this.src='/assets/cover_NA.png';"
+            onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
             class="w-full h-60 object-contain bg-gray-100 rounded-lg mb-3">
         <h3 class="font-semibold text-gray-900 line-clamp-2">{{ book.title }}</h3>
 

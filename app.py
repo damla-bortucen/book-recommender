@@ -8,8 +8,7 @@ app = FastAPI() # the application object
 # tell FastAPI where the template files live
 templates = Jinja2Templates(directory="templates")
 
-app.mount("/assets", StaticFiles(directory="assets"), name="assets") # makes cover_NA.png reachable from browser
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static") # make static reachable from browser
 
 recommender = BookRecommender.load()
 
