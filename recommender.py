@@ -8,6 +8,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_chroma import Chroma
 
+INITIAL_TOP_K = 50
+RESULTS_TOP_K = 9
 
 class BookRecommender:
     """
@@ -81,8 +83,8 @@ class BookRecommender:
             query: str,
             category: str = None,
             tone: str = None,
-            initial_top_k: int = 50,
-            final_top_k: int = 15,
+            initial_top_k: int = INITIAL_TOP_K,
+            final_top_k: int = RESULTS_TOP_K,
     ) -> pd.DataFrame:
 
         recs = self.db_books.similarity_search(query, k=initial_top_k)
@@ -116,8 +118,8 @@ class BookRecommender:
     def recommend_from_books(
             self, 
             picks: list, 
-            initial_top_k: int = 50,
-            final_top_k: int = 15,
+            initial_top_k: int = INITIAL_TOP_K,
+            final_top_k: int = RESULTS_TOP_K,
     ):
         """
         Recommend books based on a list of picked isbn13s.
@@ -145,3 +147,13 @@ class BookRecommender:
         book_recs = book_recs[book_recs["simple_categories"].isin(allowed_categories)]  
         
         return book_recs.head(final_top_k)
+
+    def search_titles(self, query: str, limit: int = 5):
+        """
+        Find books whose titles contain the query
+        """
+        if not query.strip():
+            return []
+        mask = self.books["title"].str.contains(query, case=False, na=False, regex=False)
+        hits = self.books[mask].head(limit)
+        return hits[["isbn13", "title", "authors"]].to_dict("records")

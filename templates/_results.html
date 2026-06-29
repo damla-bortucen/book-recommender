@@ -1,0 +1,18 @@
+{% for book in books %}
+    <article  class="rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition">
+        <img src="{{ book.large_thumbnail }}" alt="cover" width="100"
+            onerror="this.onerror=null; this.src='/assets/cover_NA.png';"
+            class="w-full h-60 object-contain bg-gray-100 rounded-lg mb-3">
+        <h3 class="font-semibold text-gray-900 line-clamp-2">{{ book.title }}</h3>
+
+        {% if book.authors is string %}
+            <p class="text-sm text-gray-600 mb-2"><em>{{ book.authors.replace(";", ", ") }}</em></p>
+        {% else %}
+            <p class="text-sm text-gray-600 mb-2"><em>Unknown author</em></p>
+        {% endif %}
+
+        <p class="text-sm text-gray-700 line-clamp-3">{{ book.description | truncate(220) }}</p>
+    </article>
+{% else %}
+    <p class="text-gray-600">No matches found.</p>
+{% endfor %}
