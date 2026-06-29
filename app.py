@@ -38,7 +38,7 @@ def search(
     category: str = Form("All"),
     tone: str = Form("All"),
 ): 
-    results = recommender.recommend_from_query(query, category="All", tone="All")
+    results = recommender.recommend_from_query(query, category=category, tone=tone)
     return templates.TemplateResponse(
         request,
         "_results.html",
