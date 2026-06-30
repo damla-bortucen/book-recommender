@@ -6,7 +6,7 @@ by searching over their descriptions with vector embeddings. Results can be
 narrowed by category (fiction / nonfiction / children's) and re-ranked by
 emotional tone.
 You can also pick three books you like and get a recommendation in the same
-vein — all through an interactive Gradio dashboard.
+vein — all through an interactive web app (FastAPI + HTMX).
 
 ### Dataset
 The recommender is built on [Open Library](https://openlibrary.org/developers/dumps)'s
@@ -72,34 +72,33 @@ a desired mood (e.g. joyful vs sad).
 - merged the per-emotion scores back onto each book by `isbn13` and exported
   the result to `books_with_emotions.csv`.
 
-### Recommendation Engine & Dashboard
-The recommendation logic and the UI are kept separate:
+### Recommendation Engine & Web App
+The recommendation logic and the UI are kept separate (the engine has no web
+dependency, so it can be reused from notebooks, a CLI, or tests):
 
-- **`recommender.py`** holds the `BookRecommender` engine. `BookRecommender.load()`
+- **`app/recommender.py`** holds the `BookRecommender` engine. `BookRecommender.load()`
   reads `data/books_with_emotions.csv` and builds (or loads) the persisted Chroma
-  store, so all disk/API I/O lives in one place and the engine can be used without
-  the dashboard. `recommend_from_query()` runs the Chroma similarity search, then
-  applies the category filter and emotional-tone sort, returning a DataFrame.
-  `recommend_from_books()` takes three chosen books, averages their description
-  embeddings into a single "taste" vector, searches with it, drops the picks from
-  the results, and keeps only books whose `simple_categories` match the picks'.
+  store, so all disk/API I/O lives in one place. `recommend_from_query()` runs the
+  Chroma similarity search, then applies the category filter and emotional-tone sort,
+  returning a DataFrame. `recommend_from_books()` takes the chosen books, averages
+  their description embeddings into a single "taste" vector, searches with it, drops
+  the picks, and keeps only books whose `simple_categories` match the picks'.
 
-- **`dashboard.py`** is an interactive [Gradio](https://www.gradio.app/) app that
-  drives the engine:
-  - Enter a free-text description of the kind of book you want.
-  - Optionally filter by category (`simple_categories`) and pick an emotional
-    tone (Happy, Surprising, Angry, Suspenseful, Sad), which re-ranks results by
-    the matching emotion score.
-  - `recommend_books()` calls the engine and renders the results as a thumbnail
-    gallery with truncated descriptions and formatted author lists (falling back
-    to `assets/cover_NA.png` when a book has no thumbnail).
-  - A second **"Find by 3 books"** tab lets you pick three books from searchable
-    dropdowns; `recommend_from_selection()` passes them to the engine and renders
-    the same thumbnail gallery.
+- **`app/main.py`** is a [FastAPI](https://fastapi.tiangolo.com/) app that drives the
+  engine and serves an [HTMX](https://htmx.org/)-powered UI (Jinja templates styled
+  with [Tailwind CSS](https://tailwindcss.com/)). Two tabs:
+  - **Search by description** — enter a free-text description, optionally filter by
+    category and pick an emotional tone (Happy, Surprising, Angry, Suspenseful, Sad)
+    to re-rank results. Submitting swaps the rendered results into the page via HTMX,
+    with no full reload.
+  - **Find by books** — a debounced typeahead searches titles across the ~100k books
+    (no giant dropdown); pick up to three and the engine recommends similar reads.
+  - Results render as a thumbnail gallery, falling back to `static/img/cover_NA.png`
+    when a book has no cover.
 
-Run it with:
+Run it from the project root with:
 ```bash
-python dashboard.py
+uvicorn app.main:app --reload
 ```
 
 
@@ -110,7 +109,9 @@ python dashboard.py
 - **Chroma** — vector store
 - **OpenAI embeddings** — semantic search
 - **transformers / torch** — zero-shot & emotion classification (Hugging Face)
-- **Gradio** — interactive dashboard
+- **FastAPI + Uvicorn** — web app and server
+- **HTMX + Jinja2** — server-rendered, dynamic UI (no SPA build)
+- **Tailwind CSS** — styling (built via the standalone CLI)
 - **Open Library bulk dumps** — source catalogue (editions / works / authors)
 - **seaborn / matplotlib** — exploratory plots
 
@@ -135,10 +136,10 @@ python dashboard.py
    (`books_cleaned.csv`, `books_with_categories.csv`, `books_with_emotions.csv`,
    `tagged_description.txt`) that are gitignored. Run them in order —
    `open_library_data_exploration` → `text_classification` → `sentiment_analysis` →
-   `vector_search` — to regenerate everything before launching the dashboard.
-5. Launch the dashboard from the project root:
+   `vector_search` — to regenerate everything before launching the app.
+5. Launch the app from the project root:
    ```bash
-   python dashboard.py
+   uvicorn app.main:app --reload
    ```
 
 ## Future Improvements
