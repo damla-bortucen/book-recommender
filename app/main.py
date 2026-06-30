@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from recommender import BookRecommender
+from app.recommender import BookRecommender
 
 app = FastAPI() # the application object
 # tell FastAPI where the template files live
@@ -64,4 +64,4 @@ def find_similar(request: Request, picks: list[int] = Form([])):
         {"books": results.to_dict("records")},
     )
 
-# run with uvicorn app:app --reload (reload makes server autostart when you make a change)
+# run with uvicorn app.main:app --reload (reload makes server autostart when you make a change)
