@@ -11,6 +11,15 @@ from langchain_chroma import Chroma
 INITIAL_TOP_K = 50
 RESULTS_TOP_K = 9
 
+# UI tone label -> the emotion column it sorts on
+TONE_COLUMN = {
+    "Happy": "joy",
+    "Surprising": "surprise",
+    "Angry": "anger",
+    "Suspenseful": "fear",
+    "Sad": "sadness",
+}
+
 class BookRecommender:
     """
     Recommendation engine: owns the books dataframe and the Chroma vector
@@ -34,10 +43,11 @@ class BookRecommender:
 
         # Open Library cover URLs already encode size via the "-L" suffix, so no sizing
         # param is needed; fall back to the bundled placeholder when there's no cover.
+        # use ?default=false so that blanks also throw a 404 so that fallback can be used.
         books["large_thumbnail"] = np.where(
             books["thumbnail"].isna(),
             os.path.join(assets_dir, "cover_NA.png"),
-            books["thumbnail"],
+            books["thumbnail"].fillna("") + "?default=false",
         )
 
         # one embeddings client backs both the vector store and recommend_from_books,
@@ -95,24 +105,15 @@ class BookRecommender:
         # use rank to preserve similarity order (Chroma returns nearest first)
         book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
 
+        # Narrow, then rank, then cut — doing .head() first would mean the tone
+        # sort only reshuffles books that similarity had already picked.
         if category != "All":
-            book_recs = book_recs[book_recs["simple_categories"] == category].head(final_top_k)
-        else:
-            book_recs = book_recs.head(final_top_k)
+            book_recs = book_recs[book_recs["simple_categories"] == category]
 
-        match tone:
-            case "Happy":
-                book_recs.sort_values(by="joy", ascending=False, inplace=True)
-            case "Surprising":
-                book_recs.sort_values(by="surprise", ascending=False, inplace=True)
-            case "Angry":
-                book_recs.sort_values(by="anger", ascending=False, inplace=True)
-            case "Suspenseful":
-                book_recs.sort_values(by="fear", ascending=False, inplace=True)
-            case "Sad":
-                book_recs.sort_values(by="sadness", ascending=False, inplace=True)
+        if tone in TONE_COLUMN:
+            book_recs = book_recs.sort_values(by=TONE_COLUMN[tone], ascending=False)
 
-        return book_recs
+        return book_recs.head(final_top_k)
     
 
     def recommend_from_books(
