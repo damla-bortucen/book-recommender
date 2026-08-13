@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from app.recommender import BookRecommender
+from app.recommender import TONE_COLUMN
 
 app = FastAPI() # the application object
 # tell FastAPI where the template files live
@@ -12,7 +13,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static") # make stat
 
 recommender = BookRecommender.load()
 
-TONES = ["All", "Happy", "Surprising", "Angry", "Suspenseful", "Sad"]
+TONES = ["All"] + TONE_COLUMN
 
 @app.get("/")
 def home(request: Request):
