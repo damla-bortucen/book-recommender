@@ -8,7 +8,7 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.queries import PICKED_VECTORS, SEARCH_BY_QUERY, SIMILAR_TO_PICKS, TOP_TAGS
+from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS
 
 load_dotenv()
 
@@ -104,7 +104,7 @@ class BookRecommender:
         }
         with self.pool.connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
-                return cur.execute(SEARCH_BY_QUERY, params).fetchall()
+                return cur.execute(SEARCH, params).fetchall()
 
 
     def recommend_from_books(
