@@ -47,3 +47,12 @@ ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
 LIMIT %(limit)s
 """
 
+
+SEARCH_TITLES = """
+SELECT hardcover_id, title, authors, cover_url, users_count
+FROM books
+WHERE title ILIKE %(pattern)s
+ORDER BY users_count DESC
+LIMIT %(limit)s
+"""
+# ILIKE is case insensitive LIKE

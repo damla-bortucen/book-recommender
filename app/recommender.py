@@ -140,6 +140,21 @@ class BookRecommender:
             return cur.execute(SIMILAR_TO_PICKS, params).fetchall()
 
 
+    def search_titles(self, query: str, limit: int = 5) -> list[dict]:
+        """
+        Books whose title contains the query, most-read first.
+        """
+        
+        query = query.strip()
+        if len(query) < 2:
+            return []
+
+        params = {"pattern": f"%{query}%", "limit": limit}
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(SEARCH_TITLES, params).fetchall()
+
+
     """
     def recommend_from_query(
             self,
