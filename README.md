@@ -1,152 +1,172 @@
 # Book Recommender
 
-A semantic book recommendation engine that takes a natural-language prompt
-(e.g. *"A book to teach children about nature"*) and returns matching books
-by searching over their descriptions with vector embeddings. Results can be
-narrowed by category (fiction / nonfiction / children's) and re-ranked by
-emotional tone.
-You can also pick three books you like and get a recommendation in the same
-vein — all through an interactive web app (FastAPI + HTMX).
+A semantic book recommendation engine. Describe the book you want in plain language —
+*"a book to teach children about nature"* and it returns matching books by comparing
+your phrasing against ~60k book descriptions in vector space. Or pick up to three books
+you already love and get recommendations from the average of their vectors.
 
-### Dataset
-The recommender is built on [Open Library](https://openlibrary.org/developers/dumps)'s
-monthly bulk data dumps, chosen over the earlier Kaggle/Google Books spikes to get a
-larger, more recent catalogue. Built in `open_library_data_exploration.ipynb`, which
-streams the multi-GB dumps line by line (they're far too big to load into memory):
-- **Editions dump** — keep editions that are in **English**, published **2018 or later**,
-  and have an ISBN-13. Each is keyed by its work, capturing title, subtitle, year, page
-  count, cover id, and author keys.
-- **Works dump** — descriptions and subjects live on the *work*, not the edition, so this
-  pass fills them in (only ~2% of editions have a usable description, which is why ~5M
-  editions distil down to ~100k books).
-- **Authors dump** — editions only store author *keys*, so this resolves them to names.
-- **Assembly** — clean the description text (strip markdown/HTML, normalise whitespace),
-  keep only descriptions of **≥ 20 words**, dedupe by ISBN-13, and combine `title` +
-  `subtitle` into `title_and_subtitle`. A `tagged_description` field prefixes each
-  description with its `isbn13` so a search hit can be mapped back to a specific book.
-- Exported the result (~100k books) to `books_cleaned.csv`. Note: Open Library's dumps
-  carry no ratings, so `average_rating` is left blank.
+Built on the [Hardcover](https://hardcover.app) catalogue, stored in **Postgres +
+pgvector**, served by **FastAPI + HTMX**.
 
-### Vector Search & Recommendations
-Built in `vector_search.ipynb`:
-- Exported `tagged_description` to `tagged_description.txt` (one book per line).
-- Loaded the text with LangChain's `TextLoader` and split it per-line with
-  `CharacterTextSplitter` so each book is its own document.
-- Embedded the documents with OpenAI embeddings and stored them in a **Chroma**
-  vector store, persisted to `data/chroma_db/` so the dashboard and notebooks
-  share one on-disk store.
-- Added `get_semantic_recommendation(query)`, which:
-  - embeds the query into the same vector space as the book descriptions,
-  - runs a similarity search to find the nearest descriptions,
-  - recovers each result's `isbn13` from its tagged description,
-  - looks those up in the dataframe to return full book records.
-
-### Text Classification
-Used in `text_classification.ipynb` to give every book a simple category —
-`Fiction`, `Nonfiction`, or `Children's`:
-- **Keyword mapping first.** Open Library packs many messy subjects into one string
-  (e.g. `"Fiction;Radio broadcasters in fiction;..."`), so `simplify_categories()`
-  scans them for keywords: a `juvenile`/`children` signal maps to `Children's`,
-  otherwise explicit fiction/nonfiction labels and a set of genre hints decide
-  `Fiction` vs `Nonfiction`. (Children's is kept as one bucket — the fiction/nonfiction
-  sub-split was too sparse and noisy to be useful.)
-- **Zero-shot backfill.** For the minority of books the keyword mapping can't place, a
-  Hugging Face `zero-shot-classification` pipeline (`facebook/bart-large-mnli`) predicts
-  `Fiction` vs `Nonfiction` from the description, via `generate_predictions(sequence, categories)`.
-- exported the labelled dataset to `books_with_categories.csv`.
-
-The data proved too sparse to reliably classify finer genres (romance, sci-fi,
-fantasy, etc.) beyond this split.
-
-### Emotion Classification (Sentiment Analysis)
-Used in `sentiment_analysis.ipynb` to give every book an emotional profile, so recommendations can later be tuned to 
-a desired mood (e.g. joyful vs sad).
-- used a Hugging Face `text-classification` pipeline
-  (`j-hartmann/emotion-english-distilroberta-base`) to score descriptions
-  across the six Ekman emotions plus neutral (`anger`, `disgust`, `fear`,
-  `joy`, `sadness`, `surprise`, `neutral`).
-- classified each description **sentence by sentence** rather than as a whole,
-  since a single book description often spans several emotions.
-- kept the **maximum score per emotion** across a description's sentences, via
-  `calculate_max_emotion_scores(predictions)`.
-- merged the per-emotion scores back onto each book by `isbn13` and exported
-  the result to `books_with_emotions.csv`.
-
-### Recommendation Engine & Web App
-The recommendation logic and the UI are kept separate (the engine has no web
-dependency, so it can be reused from notebooks, a CLI, or tests):
-
-- **`app/recommender.py`** holds the `BookRecommender` engine. `BookRecommender.load()`
-  reads `data/books_with_emotions.csv` and builds (or loads) the persisted Chroma
-  store, so all disk/API I/O lives in one place. `recommend_from_query()` runs the
-  Chroma similarity search, then applies the category filter and emotional-tone sort,
-  returning a DataFrame. `recommend_from_books()` takes the chosen books, averages
-  their description embeddings into a single "taste" vector, searches with it, drops
-  the picks, and keeps only books whose `simple_categories` match the picks'.
-
-- **`app/main.py`** is a [FastAPI](https://fastapi.tiangolo.com/) app that drives the
-  engine and serves an [HTMX](https://htmx.org/)-powered UI (Jinja templates styled
-  with [Tailwind CSS](https://tailwindcss.com/)). Two tabs:
-  - **Search by description** — enter a free-text description, optionally filter by
-    category and pick an emotional tone (Happy, Surprising, Angry, Suspenseful, Sad)
-    to re-rank results. Submitting swaps the rendered results into the page via HTMX,
-    with no full reload.
-  - **Find by books** — a debounced typeahead searches titles across the ~100k books
-    (no giant dropdown); pick up to three and the engine recommends similar reads.
-  - Results render as a thumbnail gallery, falling back to `static/img/cover_NA.png`
-    when a book has no cover.
-
-Run it from the project root with:
 ```bash
 uvicorn app.main:app --reload
 ```
 
+---
+
+## How it works
+
+There's one table and a row contains the book information and its vector.
+
+```
+Hardcover GraphQL API  ──▶  books (Postgres + pgvector)  ──▶  FastAPI + HTMX
+```
+
+### 1. Ingest — `data_ingest/hardcover.py`
+
+Pages the full Hardcover catalogue, keeping books with a description and **at least 25 readers**.
+
+Hardcover's `cached_tags` are split into `genres`, `moods`, and `content_warnings` arrays,
+ordered most-applied first. 
+Re-running the script refreshes the catalogue instead of duplicating it.
+
+### 2. Embed — `data_ingest/embeddings.py`
+
+Each book is represented as `title / authors / description` and embedded with a
+`text-embedding-3-small` vector at **512 dimensions**, stored in the `embedding` column.
+
+### 3. Search — `app/recommender.py` + `app/queries.py`
+
+Every search is **two stages in one query**:
+
+```sql
+-- stage 1: nearest neighbours, via the HNSW index
+WITH candidates AS (
+    SELECT ..., 1 - (embedding <=> %(vec)s::vector) AS similarity
+    FROM books
+    WHERE (%(genre)s::text IS NULL OR genres @> ARRAY[%(genre)s]::text[])
+    ORDER BY embedding <=> %(vec)s::vector
+    LIMIT 200
+)
+-- stage 2: re-rank those 200 by meaning *and* readership
+SELECT * FROM candidates
+ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
+LIMIT 9;
+```
+
+The `ln()` is used because otherwise reader counts (spanning 25 → 18,341) overpower the similarity
+ranking completely. Log compresses the range so popularity only has a slight impact on results.
+
+Filter in stage 1, so a genre or mood narrows the candidate pool rather than
+shrinking the final nine.
+
+**Find by books** fetches the picked books' stored vectors, averages them in Python,
+and searches with the result, excluding the picks from their own results.
+
+### 4. Web app — `app/main.py`
+
+FastAPI serving Jinja templates with [HTMX](https://htmx.org/), styled with Tailwind.
+No build step, no SPA — routes return HTML fragments that get swapped into the page.
+
+- **Search by description** - free-text query, optional genre and mood filters.
+- **Find by books** - a debounced title typeahead (`ILIKE`, most-read first); pick up to
+  three and get recommendations from your average taste vector.
+- Results render as a cover gallery, falling back to a placeholder when a book has no cover.
+
+---
+
+Notes on the reasoning behind design choices are in `NOTES.md`. 
+
+---
 
 ## Tech stack
+
 - **Python 3.12**
-- **pandas** — data cleaning & exploration
-- **LangChain** (`langchain-chroma`, `langchain-community`, `langchain-openai`)
-- **Chroma** — vector store
-- **OpenAI embeddings** — semantic search
-- **transformers / torch** — zero-shot & emotion classification (Hugging Face)
+- **Postgres + [pgvector](https://github.com/pgvector/pgvector)** — books and embeddings in one table
+- **psycopg 3** — connection pooling, named-parameter SQL
+- **OpenAI `text-embedding-3-small`** — 512-dimension embeddings
+- **[Hardcover](https://hardcover.app) GraphQL API** — source catalogue
 - **FastAPI + Uvicorn** — web app and server
 - **HTMX + Jinja2** — server-rendered, dynamic UI (no SPA build)
-- **Tailwind CSS** — styling (built via the standalone CLI)
-- **Open Library bulk dumps** — source catalogue (editions / works / authors)
-- **seaborn / matplotlib** — exploratory plots
+- **Tailwind CSS** — styling, via the standalone CLI
+
+---
 
 ## Setup
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Create a `.env` file in the project root with your API keys:
-   ```
-   OPENAI_API_KEY=sk-...
-   HF_TOKEN=hf_...
-   ```
-   (`OPENAI_API_KEY` powers the embeddings; `HF_TOKEN` is used for the
-   Hugging Face classification models.)
-3. Download the [Open Library data dumps](https://openlibrary.org/developers/dumps)
-   (editions, works, authors) — and the ratings dump if you want it later —
-   decompress them, and place them in `data/open_library/` (the notebook expects
-   filenames like `ol_dump_editions_2026-05-31.txt`; update the dates in
-   `open_library_data_exploration.ipynb` to match the dump you downloaded).
-4. The notebooks (in `notebooks/`) write intermediate datasets to `data/`
-   (`books_cleaned.csv`, `books_with_categories.csv`, `books_with_emotions.csv`,
-   `tagged_description.txt`) that are gitignored. Run them in order —
-   `open_library_data_exploration` → `text_classification` → `sentiment_analysis` →
-   `vector_search` — to regenerate everything before launching the app.
-5. Launch the app from the project root:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
 
-## Future Improvements
-- evaluation of performance
-- improve UI (incl. a searchable book picker that scales to the ~100k-book catalogue)
-- improve category accuracy and add finer genres
-- backfill ratings from Open Library's ratings dump
+**1. Install dependencies**
+
+```bash
+pip install -r requirements.txt
+```
+
+**2. Create `.env` in the project root**
+
+```
+DATABASE_URL=postgresql://user@localhost:5432/books
+OPENAI_API_KEY=sk-...
+HARDCOVER_TOKEN=...
+```
+
+Hardcover's token already includes the `Bearer ` prefix — don't add a second one, or you
+get "Unable to verify token", which reads like an expired key.
+
+**3. Create the table** (needs Postgres with the `vector` extension available)
+
+```bash
+psql "$DATABASE_URL" -f db/schema.sql
+```
+
+**4. Load the catalogue, then embed it**
+
+```bash
+python -m data_ingest.hardcover     # ~60k books, rate-limited to 60 req/min
+python -m data_ingest.embeddings    # batches of 200; safe to interrupt and resume
+```
+
+**5. Build the indexes** — after the load, not before
+
+```bash
+psql "$DATABASE_URL" -f db/indexes.sql
+```
+
+**6. Run it**
+
+```bash
+uvicorn app.main:app --reload
+```
+
+---
+
+## Project layout
+
+```
+app/
+  main.py          FastAPI routes
+  recommender.py   BookRecommender — connection pool, embedding, search
+  queries.py       all SQL, as named constants
+data_ingest/
+  hardcover.py     catalogue → Postgres (re-runnable upsert)
+  embeddings.py    descriptions → vectors (resumable)
+db/
+  schema.sql       table + pgvector extension
+  indexes.sql      B-tree / GIN / HNSW, built after loading
+templates/         index.html + HTMX partials
+static/            generated CSS, picker JS, fallback cover
+NOTES.md           working notes on storage, pgvector, indexing, API behaviour
+README.md
+```
+
+---
+
+## Future improvements
+
+- evaluation/testing
+- deployment
+- let the popularity weight be tuned from the UI
+- use `content_warnings` as an exclusion filter
+- incremental refresh to keep books up to date
 
 ###### Acknowledgments
-["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw)
+Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);
+the data source, storage layer, and web app have since been rebuilt.
