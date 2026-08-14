@@ -9,10 +9,13 @@ from pgvector.psycopg import register_vector
 
 load_dotenv()
 
+client = OpenAI()
+
 MODEL = "text-embedding-3-small"
 DIMENSIONS = 512      # reduced from the model's native 1536
 BATCH_SIZE = 200      # texts per API call
 MAX_CHARS = 20_000    # defensive cap, the model's limit is ~8k tokens
+
 
 SELECT_PENDING = """
 SELECT hardcover_id, title, authors, description
@@ -29,10 +32,21 @@ def to_text(title: str, authors: list[str] | None, description: str) -> str:
     return f"{title}\n{author_line}\n{description}"[:MAX_CHARS]
 
 
+def embed(texts: list[str]) -> list[list[float]]:
+    response = client.embeddings.create(
+        model=MODEL,
+        input=texts,
+        dimensions=DIMENSIONS,
+    )
+    return [item.embedding for item in response.data]
+
+
 if __name__ == "__main__":
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
             cur.execute(SELECT_PENDING, (3,))
-            for book_id, title, authors, description in cur.fetchall():
-                print(f"--- {book_id} ---")
-                print(to_text(title, authors, description)[:300])
+            rows = cur.fetchall()
+    vectors = embed([to_text(t, a, d) for _, t, a, d in rows])
+    print("vectors:", len(vectors))
+    print("dimensions:", len(vectors[0]))
+    print("first 5 values:", vectors[0][:5])
