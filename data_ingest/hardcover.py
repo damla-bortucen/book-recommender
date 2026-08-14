@@ -18,6 +18,7 @@ MIN_USERS = 25       # only books with at least this many readers
 TOKEN = os.environ["HARDCOVER_TOKEN"]
 MIN_TAG_COUNT = 2    # ignore tags only one person applied (tags = categories)
 
+
 QUERY = """
 query Books($limit: Int!, $offset: Int!, $minUsers: Int!) {
   books(
@@ -36,6 +37,36 @@ query Books($limit: Int!, $offset: Int!, $minUsers: Int!) {
 }
 """
 # slug: the book's URL segment on hardcover.app, e.g. hardcover.app/books/1984
+
+
+UPSERT = """
+INSERT INTO books (
+    hardcover_id, slug, title, authors, description, cover_url,
+    isbn13, release_year, pages, rating, ratings_count, users_count,
+    genres, moods, content_warnings
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (hardcover_id) DO UPDATE SET
+    slug = EXCLUDED.slug,
+    title = EXCLUDED.title,
+    authors = EXCLUDED.authors,
+    description = EXCLUDED.description,
+    cover_url = EXCLUDED.cover_url,
+    isbn13 = EXCLUDED.isbn13,
+    release_year = EXCLUDED.release_year,
+    pages = EXCLUDED.pages,
+    rating = EXCLUDED.rating,
+    ratings_count = EXCLUDED.ratings_count,
+    users_count = EXCLUDED.users_count,
+    genres = EXCLUDED.genres,
+    moods = EXCLUDED.moods,
+    content_warnings = EXCLUDED.content_warnings,
+    updated_at = now(),
+    -- a changed description invalidates the stored vector
+    embedding = CASE
+        WHEN books.description IS DISTINCT FROM EXCLUDED.description THEN NULL
+        ELSE books.embedding
+    END
+"""
 
 
 def fetch(limit: int, offset: int = 0) -> list[dict]:
@@ -86,6 +117,11 @@ def to_row(book: dict) -> tuple:
 
 
 if __name__ == "__main__":
-    row = to_row(fetch(1)[0])
-    for value in row:
-        print(repr(value)[:100]) # only the first 100 chars so that it can be read in terminal
+    books = fetch(limit=100)
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            cur.executemany(UPSERT, [to_row(b) for b in books])
+        conn.commit()
+    
+    print(f"{len(books)} books upserted")
