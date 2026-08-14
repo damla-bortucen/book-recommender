@@ -1,3 +1,6 @@
+BOOK_COUNT = "SELECT count(*) FROM books"
+
+
 TOP_TAGS = """
 SELECT tag FROM books, unnest({column}) AS tag
 GROUP BY tag ORDER BY count(*) DESC LIMIT %s

@@ -8,7 +8,7 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES
+from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES, BOOK_COUNT
 
 load_dotenv()
 
@@ -38,10 +38,15 @@ class BookRecommender:
     Owns the connection pool and turns a request into a list of book rows.
     """
 
-    def __init__(self, pool: ConnectionPool, genres: list[str], moods: list[str]):
-        self.pool = pool
+    def __init__(self, pool: ConnectionPool, genres: list[str], moods: list[str], book_count: int):
+        # A connection is an open, authenticated network conversation with Postgres — a socket, a TLS handshake, a login
+        # Opening one takes time so open multiple at the beginning and keep them alive in the "pool"
+        # pool.connection() gets one that nobody is using
+        self.pool = pool 
+
         self.genres = genres
         self.moods = moods
+        self.book_count = book_count
 
 
     @classmethod
@@ -55,6 +60,8 @@ class BookRecommender:
         )
         genres = cls._top_tags(pool, "genres", tag_limit)
         moods = cls._top_tags(pool, "moods", tag_limit)
+        with pool.connection() as conn:
+            book_count = conn.execute(BOOK_COUNT).fetchone()[0] # count returned as a tuple so [0] needed
         return cls(pool, genres, moods)
 
 
