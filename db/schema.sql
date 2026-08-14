@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS books (
     hardcover_id     INTEGER PRIMARY KEY,
     slug             TEXT,
     title            TEXT NOT NULL,
-    subtitle         TEXT,
     authors          TEXT[],
     description      TEXT NOT NULL,
     cover_url        TEXT,
