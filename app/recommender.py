@@ -14,8 +14,10 @@ EMBED_MODEL = "text-embedding-3-small"
 EMBED_DIMENSIONS = 512      # must match the VECTOR(512) column
 RESULTS_TOP_K = 9
 POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
+CANDIDATE_POOL = 200
 
 client = OpenAI()
+
 
 TOP_TAGS = """
 SELECT tag FROM books, unnest({column}) AS tag
@@ -23,22 +25,37 @@ GROUP BY tag ORDER BY count(*) DESC LIMIT %s
 """
 
 SEARCH = """
-SELECT hardcover_id, slug, title, authors, description, cover_url,
-       release_year, pages, rating, ratings_count, users_count
-FROM books
-ORDER BY embedding <=> %(vec)s::vector
+-- stage 1: nearest books by meaning. uses the HNSW index.
+WITH candidates AS (
+    SELECT hardcover_id, slug, title, authors, description, cover_url,
+           release_year, pages, rating, ratings_count, users_count,
+           genres, moods,
+           1 - (embedding <=> %(vec)s::vector) AS similarity
+    FROM books
+    WHERE (%(genre)s::text IS NULL OR genres @> ARRAY[%(genre)s]::text[])
+      AND (%(mood)s::text  IS NULL OR moods  @> ARRAY[%(mood)s]::text[])
+    ORDER BY embedding <=> %(vec)s::vector
+    LIMIT %(pool)s
+)
+-- stage 2: re-rank those 200 rows by meaning *and* number of readers. 
+SELECT * FROM candidates
+ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
 LIMIT %(limit)s
 """
 # typecast to vector so <=> knows to treat the incoming arraty as vector
 
-# UI tone label -> the emotion column it sorts on
-TONE_COLUMN = {
-    "Happy": "joy",
-    "Surprising": "surprise",
-    "Angry": "anger",
-    "Suspenseful": "fear",
-    "Sad": "sadness",
-}
+
+def _configure(conn) -> None:
+    register_vector(conn)   # make Postgres vector values come back as Vector objects
+    conn.autocommit = True
+
+    # keep walking the HNSW graph until LIMIT is filled
+    # doesnt guarantee distance order but faster
+    conn.execute("SET hnsw.iterative_scan = relaxed_order") 
+
+    # how many candidate nodes to hold while walking the graph
+    conn.execute("SET hnsw.ef_search = 100")
+
 
 class BookRecommender:
     """
@@ -57,7 +74,7 @@ class BookRecommender:
             os.environ["DATABASE_URL"],
             min_size=1,
             max_size=4,
-            configure=register_vector,   # each new connection learns the vector type
+            configure=_configure,   # each new connection learns the vector type
             open=True,
         )
         genres = cls._top_tags(pool, "genres", tag_limit)
@@ -89,12 +106,26 @@ class BookRecommender:
         return response.data[0].embedding
 
 
-    def recommend_from_query(self, query: str, limit: int = RESULTS_TOP_K) -> list[dict]:
+    def recommend_from_query(
+        self,
+        query: str,
+        genre: str | None = None,
+        mood: str | None = None,
+        weight: float = POPULARITY_WEIGHT,
+        limit: int = RESULTS_TOP_K,
+    ) -> list[dict]:
         """
         The books whose descriptions are nearest to the query.
         """
     
-        params = {"vec": self.embed_query(query), "limit": limit}
+        params = {
+            "vec": self.embed_query(query),
+            "genre": genre if genre and genre != "All" else None,
+            "mood": mood if mood and mood != "All" else None,
+            "pool": CANDIDATE_POOL,
+            "weight": weight,
+            "limit": limit,
+        }
         with self.pool.connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 return cur.execute(SEARCH, params).fetchall()
