@@ -8,6 +8,8 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
+from app.queries import PICKED_VECTORS, SEARCH_BY_QUERY, SIMILAR_TO_PICKS, TOP_TAGS
+
 load_dotenv()
 
 EMBED_MODEL = "text-embedding-3-small"
@@ -17,32 +19,6 @@ POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
 CANDIDATE_POOL = 200
 
 client = OpenAI()
-
-
-TOP_TAGS = """
-SELECT tag FROM books, unnest({column}) AS tag
-GROUP BY tag ORDER BY count(*) DESC LIMIT %s
-"""
-
-SEARCH = """
--- stage 1: nearest books by meaning. uses the HNSW index.
-WITH candidates AS (
-    SELECT hardcover_id, slug, title, authors, description, cover_url,
-           release_year, pages, rating, ratings_count, users_count,
-           genres, moods,
-           1 - (embedding <=> %(vec)s::vector) AS similarity
-    FROM books
-    WHERE (%(genre)s::text IS NULL OR genres @> ARRAY[%(genre)s]::text[])
-      AND (%(mood)s::text  IS NULL OR moods  @> ARRAY[%(mood)s]::text[])
-    ORDER BY embedding <=> %(vec)s::vector
-    LIMIT %(pool)s
-)
--- stage 2: re-rank those 200 rows by meaning *and* number of readers. 
-SELECT * FROM candidates
-ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
-LIMIT %(limit)s
-"""
-# typecast to vector so <=> knows to treat the incoming arraty as vector
 
 
 def _configure(conn) -> None:
@@ -128,7 +104,40 @@ class BookRecommender:
         }
         with self.pool.connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
-                return cur.execute(SEARCH, params).fetchall()
+                return cur.execute(SEARCH_BY_QUERY, params).fetchall()
+
+
+    def recommend_from_books(
+        self,
+        picks: list[int],
+        weight: float = POPULARITY_WEIGHT,
+        limit: int = RESULTS_TOP_K,
+    ) -> list[dict]:
+        """
+        Books similar to a set of picked books, excluding the picks themselves.
+        """
+
+        picks = list(dict.fromkeys(p for p in picks if p))   # drop blanks, keep order
+        if not picks: return []
+
+        with self.pool.connection() as conn:
+            # 1. fetch the picked books' stored vectors
+            rows = conn.execute(PICKED_VECTORS, {"ids": picks}).fetchall()
+            if not rows: return []
+
+            # average them
+            vectors = [row[0].to_list() for row in rows]
+            average = [sum(values) / len(values) for values in zip(*vectors)]
+
+        params = {
+                "vec": average,
+                "exclude": picks,
+                "pool": CANDIDATE_POOL,
+                "weight": weight,
+                "limit": limit,
+        }
+        with conn.cursor(row_factory=dict_row) as cur:
+            return cur.execute(SIMILAR_TO_PICKS, params).fetchall()
 
 
     """
