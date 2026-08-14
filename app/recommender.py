@@ -1,15 +1,26 @@
+"""Recommendation engine backed by Postgres + pgvector."""
+
 import os
-import pandas as pd
-import numpy as np
+
 from dotenv import load_dotenv
+from openai import OpenAI
+from pgvector.psycopg import register_vector
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
-from langchain_community.document_loaders import TextLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import CharacterTextSplitter
-from langchain_chroma import Chroma
+load_dotenv()
 
-INITIAL_TOP_K = 50
+EMBED_MODEL = "text-embedding-3-small"
+EMBED_DIMENSIONS = 512      # must match the VECTOR(512) column
 RESULTS_TOP_K = 9
+POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
+
+client = OpenAI()
+
+TOP_TAGS = """
+SELECT tag FROM books, unnest({column}) AS tag
+GROUP BY tag ORDER BY count(*) DESC LIMIT %s
+"""
 
 # UI tone label -> the emotion column it sorts on
 TONE_COLUMN = {
@@ -22,54 +33,34 @@ TONE_COLUMN = {
 
 class BookRecommender:
     """
-    Recommendation engine: owns the books dataframe and the Chroma vector
-    store, and turns a request into a ranked DataFrame of books.
+    Owns the connection pool and turns a request into a list of book rows.
     """
 
-    def __init__(self, books: pd.DataFrame, db_books: Chroma, embeddings: OpenAIEmbeddings):
-        self.books = books
-        self.db_books = db_books
-        self.embeddings = embeddings
+    def __init__(self, pool: ConnectionPool, genres: list[str], moods: list[str]):
+        self.pool = pool
+        self.genres = genres
+        self.moods = moods
 
-    @classmethod    # classmethod can be called on a class without having an instance yet
-    def load(cls, data_dir: str = "data", assets_dir: str = "/static/img") -> "BookRecommender":
-        """
-        Load the dataframe and build/load the persisted vector store.
-        All disk/API I/O lives here so importing this module has no side effects.
-        """
-        load_dotenv()
-
-        books = pd.read_csv(os.path.join(data_dir, "books_with_emotions.csv"))
-
-        # Open Library cover URLs already encode size via the "-L" suffix, so no sizing
-        # param is needed; fall back to the bundled placeholder when there's no cover.
-        # use ?default=false so that blanks also throw a 404 so that fallback can be used.
-        books["large_thumbnail"] = np.where(
-            books["thumbnail"].isna(),
-            os.path.join(assets_dir, "cover_NA.png"),
-            books["thumbnail"].fillna("") + "?default=false",
+    @classmethod
+    def load(cls, tag_limit: int = 20) -> "BookRecommender":
+        pool = ConnectionPool(
+            os.environ["DATABASE_URL"],
+            min_size=1,
+            max_size=4,
+            configure=register_vector,   # each new connection learns the vector type
+            open=True,
         )
+        genres = cls._top_tags(pool, "genres", tag_limit)
+        moods = cls._top_tags(pool, "moods", tag_limit)
+        return cls(pool, genres, moods)
 
-        # one embeddings client backs both the vector store and recommend_from_books,
-        # so queries are always embedded with the same model the stored vectors used
-        embeddings = OpenAIEmbeddings()
-
-        chroma_dir = os.path.join(data_dir, "chroma_db")
-        if os.path.exists(chroma_dir):
-            # already built once so just loads the saved vectors, no API calls
-            db_books = Chroma(persist_directory=chroma_dir, embedding_function=embeddings)
-        else:
-            # first run embeds everything once, then save it
-            raw_documents = TextLoader(os.path.join(data_dir, "tagged_description.txt")).load()
-            text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
-            documents = text_splitter.split_documents(raw_documents)
-            db_books = Chroma.from_documents(
-                documents,
-                embeddings,
-                persist_directory=chroma_dir   # save the vectors to a folder
-            )
-
-        return cls(books, db_books, embeddings)
+    @staticmethod
+    def _top_tags(pool: ConnectionPool, column: str, limit: int) -> list[str]:
+        """Most-used values from a tag array column, for the filter dropdowns."""
+        sql = TOP_TAGS.format(column=column)   # our own literal, never user input
+        with pool.connection() as conn:
+            rows = conn.execute(sql, (limit,)).fetchall()
+        return [row[0] for row in rows]
 
     @property   # makes metod accessible like an attribute: i.e. recommender.categories
     def categories(self) -> list:
@@ -88,6 +79,7 @@ class BookRecommender:
         rows = self.books.sort_values("title")
         return [(f"{row.title} by {row.authors}", row.isbn13) for row in rows.itertuples()]
 
+    """
     def recommend_from_query(
             self,
             query: str,
@@ -115,18 +107,13 @@ class BookRecommender:
 
         return book_recs.head(final_top_k)
     
-
+    
     def recommend_from_books(
             self, 
             picks: list, 
             initial_top_k: int = INITIAL_TOP_K,
             final_top_k: int = RESULTS_TOP_K,
     ):
-        """
-        Recommend books based on a list of picked isbn13s.
-        Averages the picks' embeddings, searches, drops the picks, and keeps
-        only books whose simple_categories matches one of the picks'.
-        """
 
         picks = [p for p in picks if p]            # drop blank dropdowns
         picks = list(dict.fromkeys(picks))         # drop duplicate picks, keep order
@@ -150,11 +137,9 @@ class BookRecommender:
         return book_recs.head(final_top_k)
 
     def search_titles(self, query: str, limit: int = 5):
-        """
-        Find books whose titles contain the query
-        """
         if not query.strip():
             return []
         mask = self.books["title"].str.contains(query, case=False, na=False, regex=False)
         hits = self.books[mask].head(limit)
         return hits[["isbn13", "title", "authors"]].to_dict("records")
+    """
