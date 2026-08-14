@@ -17,6 +17,7 @@ API_URL = "https://api.hardcover.app/v1/graphql"
 MIN_USERS = 25       # only books with at least this many readers
 TOKEN = os.environ["HARDCOVER_TOKEN"]
 MIN_TAG_COUNT = 2    # ignore tags only one person applied (tags = categories)
+PAGE_SIZE = 1000     # Hardcover's maximum
 
 
 QUERY = """
@@ -116,12 +117,23 @@ def to_row(book: dict) -> tuple:
     )
 
 
-if __name__ == "__main__":
-    books = fetch(limit=100)
-
+def main() -> None:
+    total = 0
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        with conn.cursor() as cur:
-            cur.executemany(UPSERT, [to_row(b) for b in books])
-        conn.commit()
-    
-    print(f"{len(books)} books upserted")
+        offset = 0 # skip first X, as you move through the catalogue
+        while True:
+            books = fetch(limit=PAGE_SIZE, offset=offset)
+            if not books:
+                break
+            with conn.cursor() as cur:
+                cur.executemany(UPSERT, [to_row(b) for b in books])
+            conn.commit()
+            total += len(books)
+            print(f"{total:,} books upserted (offset {offset:,})")
+            offset += PAGE_SIZE
+            time.sleep(1)   # stay under 60 requests/minute
+    print(f"done: {total:,} books")
+
+
+if __name__ == "__main__":
+    main()
