@@ -25,6 +25,8 @@ ORDER BY users_count DESC
 LIMIT %s
 """
 
+UPDATE_EMBEDDING = "UPDATE books SET embedding = %s WHERE hardcover_id = %s"
+
 
 def to_text(title: str, authors: list[str] | None, description: str) -> str:
     """The text that represents a book in vector space."""
@@ -41,12 +43,51 @@ def embed(texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 
 
-if __name__ == "__main__":
+def fetch_batch(conn) -> list[tuple]:
+    """
+    The next batch of books that still need an embedding.
+    """
+    with conn.cursor() as cur:
+        cur.execute(SELECT_PENDING, (BATCH_SIZE,))
+        return cur.fetchall()
+
+
+def save_embeddings(conn, books: list[tuple], vectors: list[list[float]]) -> None:
+    """
+    Write each vector back to the book it came from.
+    """
+    updates = []
+    for book, vector in zip(books, vectors):
+        book_id = book[0]
+        updates.append((vector, book_id))
+
+    with conn.cursor() as cur:
+        cur.executemany(UPDATE_EMBEDDING, updates)
+    conn.commit()
+
+
+def main() -> None:
+    done = 0
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        with conn.cursor() as cur:
-            cur.execute(SELECT_PENDING, (3,))
-            rows = cur.fetchall()
-    vectors = embed([to_text(t, a, d) for _, t, a, d in rows])
-    print("vectors:", len(vectors))
-    print("dimensions:", len(vectors[0]))
-    print("first 5 values:", vectors[0][:5])
+        register_vector(conn)          # teaches psycopg to send lists as vectors
+
+        while True:
+            books = fetch_batch(conn)
+            if not books:
+                break
+
+            texts = []
+            for book_id, title, authors, description in books:
+                texts.append(to_text(title, authors, description))
+
+            vectors = embed(texts)
+            save_embeddings(conn, books, vectors)
+
+            done += len(books)
+            print(f"{done:,} embedded")
+
+    print(f"done: {done:,} books embedded")
+
+
+if __name__ == "__main__":
+    main()
