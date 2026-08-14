@@ -8,7 +8,7 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS
+from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES
 
 load_dotenv()
 
@@ -144,7 +144,7 @@ class BookRecommender:
         """
         Books whose title contains the query, most-read first.
         """
-        
+
         query = query.strip()
         if len(query) < 2:
             return []
@@ -153,69 +153,3 @@ class BookRecommender:
         with self.pool.connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 return cur.execute(SEARCH_TITLES, params).fetchall()
-
-
-    """
-    def recommend_from_query(
-            self,
-            query: str,
-            category: str = None,
-            tone: str = None,
-            initial_top_k: int = INITIAL_TOP_K,
-            final_top_k: int = RESULTS_TOP_K,
-    ) -> pd.DataFrame:
-
-        recs = self.db_books.similarity_search(query, k=initial_top_k)
-        books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
-        
-        rank = {isbn: i for i, isbn in enumerate(books_list)}
-        book_recs = self.books[self.books["isbn13"].isin(books_list)].copy() # isin keeps DataFrame order, not similarity order
-        # use rank to preserve similarity order (Chroma returns nearest first)
-        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
-
-        # Narrow, then rank, then cut — doing .head() first would mean the tone
-        # sort only reshuffles books that similarity had already picked.
-        if category != "All":
-            book_recs = book_recs[book_recs["simple_categories"] == category]
-
-        if tone in TONE_COLUMN:
-            book_recs = book_recs.sort_values(by=TONE_COLUMN[tone], ascending=False)
-
-        return book_recs.head(final_top_k)
-    
-    
-    def recommend_from_books(
-            self, 
-            picks: list, 
-            initial_top_k: int = INITIAL_TOP_K,
-            final_top_k: int = RESULTS_TOP_K,
-    ):
-
-        picks = [p for p in picks if p]            # drop blank dropdowns
-        picks = list(dict.fromkeys(picks))         # drop duplicate picks, keep order
-        if not picks:
-            return self.books.head(0)              # nothing chosen -> empty result
-
-        selected = self.books[self.books["isbn13"].isin(picks)]
-        allowed_categories = set(selected["simple_categories"])
-
-        avg = np.mean(self.embeddings.embed_documents(selected["description"].tolist()), axis=0).tolist()
-
-        recs = self.db_books.similarity_search_by_vector(avg, k=initial_top_k)
-        isbns = [int(r.page_content.strip('"').split()[0]) for r in recs]
-
-        rank = {isbn: i for i, isbn in enumerate(isbns)}
-        book_recs = self.books[self.books["isbn13"].isin(isbns)].copy()
-        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
-        book_recs = book_recs[~book_recs["isbn13"].isin(picks)]
-        book_recs = book_recs[book_recs["simple_categories"].isin(allowed_categories)]  
-        
-        return book_recs.head(final_top_k)
-
-    def search_titles(self, query: str, limit: int = 5):
-        if not query.strip():
-            return []
-        mask = self.books["title"].str.contains(query, case=False, na=False, regex=False)
-        hits = self.books[mask].head(limit)
-        return hits[["isbn13", "title", "authors"]].to_dict("records")
-    """
