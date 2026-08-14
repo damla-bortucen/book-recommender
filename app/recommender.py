@@ -22,6 +22,15 @@ SELECT tag FROM books, unnest({column}) AS tag
 GROUP BY tag ORDER BY count(*) DESC LIMIT %s
 """
 
+SEARCH = """
+SELECT hardcover_id, slug, title, authors, description, cover_url,
+       release_year, pages, rating, ratings_count, users_count
+FROM books
+ORDER BY embedding <=> %(vec)s::vector
+LIMIT %(limit)s
+"""
+# typecast to vector so <=> knows to treat the incoming arraty as vector
+
 # UI tone label -> the emotion column it sorts on
 TONE_COLUMN = {
     "Happy": "joy",
@@ -41,6 +50,7 @@ class BookRecommender:
         self.genres = genres
         self.moods = moods
 
+
     @classmethod
     def load(cls, tag_limit: int = 20) -> "BookRecommender":
         pool = ConnectionPool(
@@ -54,30 +64,41 @@ class BookRecommender:
         moods = cls._top_tags(pool, "moods", tag_limit)
         return cls(pool, genres, moods)
 
+
     @staticmethod
     def _top_tags(pool: ConnectionPool, column: str, limit: int) -> list[str]:
-        """Most-used values from a tag array column, for the filter dropdowns."""
+        """
+        Most-used values from a tag array column, for the filter dropdowns.
+        """
+
         sql = TOP_TAGS.format(column=column)   # our own literal, never user input
         with pool.connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
         return [row[0] for row in rows]
 
-    @property   # makes metod accessible like an attribute: i.e. recommender.categories
-    def categories(self) -> list:
-        """
-        Category choices for a UI dropdown, with an "All" sentinel first.
-        """
-        return ["All"] + sorted(self.books["simple_categories"].unique())
 
-    @property
-    def book_choices(self) -> list:
+    @staticmethod
+    def embed_query(text: str) -> list[float]:
         """
-        (label, isbn13) pairs for the book-picker dropdowns. The label is
-        shown to the user; the isbn13 value is what gets passed back to
-        recommend_from_books.
+        Turn search text into a vector in the same space as the books.
         """
-        rows = self.books.sort_values("title")
-        return [(f"{row.title} by {row.authors}", row.isbn13) for row in rows.itertuples()]
+
+        response = client.embeddings.create(
+            model=EMBED_MODEL, input=[text], dimensions=EMBED_DIMENSIONS
+        )
+        return response.data[0].embedding
+
+
+    def recommend_from_query(self, query: str, limit: int = RESULTS_TOP_K) -> list[dict]:
+        """
+        The books whose descriptions are nearest to the query.
+        """
+    
+        params = {"vec": self.embed_query(query), "limit": limit}
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(SEARCH, params).fetchall()
+
 
     """
     def recommend_from_query(
