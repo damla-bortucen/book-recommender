@@ -5,7 +5,7 @@ const pickCount = document.getElementById('pick-count');
 
 document.getElementById('book-options').addEventListener('click', function (e) {
     const opt = e.target.closest('.option');
-    if (opt) addPick(opt.dataset.isbn, opt.dataset.label);
+    if (opt) addPick(opt.dataset.id, opt.dataset.label);
 });
 
 function updateFeedback() {
@@ -14,16 +14,16 @@ function updateFeedback() {
     bookInput.disabled = n >= 3; // disable the box at the limit
 }
 
-function addPick(isbn, label) {
+function addPick(bookId, label) {
     const picks = booksForm.querySelectorAll('input[name="picks"]');
     if (picks.length >= 3) return;                                                   // max 3
-    if (booksForm.querySelector('input[name="picks"][value="' + isbn + '"]')) return; // no dupes
+    if (booksForm.querySelector('input[name="picks"][value="' + bookId + '"]')) return; // no dupes
 
     // hidden field that actually gets submitted
     const hidden = document.createElement('input');
     hidden.type = 'hidden';
     hidden.name = 'picks';
-    hidden.value = isbn;
+    hidden.value = bookId;
     booksForm.appendChild(hidden);
 
     // visible chip

@@ -1,160 +1,162 @@
+"""Recommendation engine backed by Postgres + pgvector."""
+
 import os
-import pandas as pd
-import numpy as np
+
 from dotenv import load_dotenv
+from openai import OpenAI
+from pgvector.psycopg import register_vector
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
-from langchain_community.document_loaders import TextLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import CharacterTextSplitter
-from langchain_chroma import Chroma
+from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES, BOOK_COUNT
 
-INITIAL_TOP_K = 50
+load_dotenv()
+
+EMBED_MODEL = "text-embedding-3-small"
+EMBED_DIMENSIONS = 512      # must match the VECTOR(512) column
 RESULTS_TOP_K = 9
+POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
+CANDIDATE_POOL = 200
 
-# UI tone label -> the emotion column it sorts on
-TONE_COLUMN = {
-    "Happy": "joy",
-    "Surprising": "surprise",
-    "Angry": "anger",
-    "Suspenseful": "fear",
-    "Sad": "sadness",
-}
+client = OpenAI()
+
+
+def _configure(conn) -> None:
+    register_vector(conn)   # make Postgres vector values come back as Vector objects
+    conn.autocommit = True
+
+    # keep walking the HNSW graph until LIMIT is filled
+    # doesnt guarantee distance order but faster
+    conn.execute("SET hnsw.iterative_scan = relaxed_order") 
+
+    # how many candidate nodes to hold while walking the graph
+    conn.execute("SET hnsw.ef_search = 100")
+
 
 class BookRecommender:
     """
-    Recommendation engine: owns the books dataframe and the Chroma vector
-    store, and turns a request into a ranked DataFrame of books.
+    Owns the connection pool and turns a request into a list of book rows.
     """
 
-    def __init__(self, books: pd.DataFrame, db_books: Chroma, embeddings: OpenAIEmbeddings):
-        self.books = books
-        self.db_books = db_books
-        self.embeddings = embeddings
+    def __init__(self, pool: ConnectionPool, genres: list[str], moods: list[str], book_count: int):
+        # A connection is an open, authenticated network conversation with Postgres — a socket, a TLS handshake, a login
+        # Opening one takes time so open multiple at the beginning and keep them alive in the "pool"
+        # pool.connection() gets one that nobody is using
+        self.pool = pool 
 
-    @classmethod    # classmethod can be called on a class without having an instance yet
-    def load(cls, data_dir: str = "data", assets_dir: str = "/static/img") -> "BookRecommender":
-        """
-        Load the dataframe and build/load the persisted vector store.
-        All disk/API I/O lives here so importing this module has no side effects.
-        """
-        load_dotenv()
+        self.genres = genres
+        self.moods = moods
+        self.book_count = book_count
 
-        books = pd.read_csv(os.path.join(data_dir, "books_with_emotions.csv"))
 
-        # Open Library cover URLs already encode size via the "-L" suffix, so no sizing
-        # param is needed; fall back to the bundled placeholder when there's no cover.
-        # use ?default=false so that blanks also throw a 404 so that fallback can be used.
-        books["large_thumbnail"] = np.where(
-            books["thumbnail"].isna(),
-            os.path.join(assets_dir, "cover_NA.png"),
-            books["thumbnail"].fillna("") + "?default=false",
+    @classmethod
+    def load(cls, tag_limit: int = 20) -> "BookRecommender":
+        pool = ConnectionPool(
+            os.environ["DATABASE_URL"],
+            min_size=1,
+            max_size=4,
+            configure=_configure,   # each new connection learns the vector type
+            open=True,
         )
+        genres = cls._top_tags(pool, "genres", tag_limit)
+        moods = cls._top_tags(pool, "moods", tag_limit)
+        with pool.connection() as conn:
+            book_count = conn.execute(BOOK_COUNT).fetchone()[0] # count returned as a tuple so [0] needed
+        return cls(pool, genres, moods, book_count)
 
-        # one embeddings client backs both the vector store and recommend_from_books,
-        # so queries are always embedded with the same model the stored vectors used
-        embeddings = OpenAIEmbeddings()
 
-        chroma_dir = os.path.join(data_dir, "chroma_db")
-        if os.path.exists(chroma_dir):
-            # already built once so just loads the saved vectors, no API calls
-            db_books = Chroma(persist_directory=chroma_dir, embedding_function=embeddings)
-        else:
-            # first run embeds everything once, then save it
-            raw_documents = TextLoader(os.path.join(data_dir, "tagged_description.txt")).load()
-            text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0.1, chunk_overlap=0)
-            documents = text_splitter.split_documents(raw_documents)
-            db_books = Chroma.from_documents(
-                documents,
-                embeddings,
-                persist_directory=chroma_dir   # save the vectors to a folder
-            )
-
-        return cls(books, db_books, embeddings)
-
-    @property   # makes metod accessible like an attribute: i.e. recommender.categories
-    def categories(self) -> list:
+    @staticmethod
+    def _top_tags(pool: ConnectionPool, column: str, limit: int) -> list[str]:
         """
-        Category choices for a UI dropdown, with an "All" sentinel first.
+        Most-used values from a tag array column, for the filter dropdowns.
         """
-        return ["All"] + sorted(self.books["simple_categories"].unique())
 
-    @property
-    def book_choices(self) -> list:
+        sql = TOP_TAGS.format(column=column)   # our own literal, never user input
+        with pool.connection() as conn:
+            rows = conn.execute(sql, (limit,)).fetchall()
+        return [row[0] for row in rows]
+
+
+    @staticmethod
+    def embed_query(text: str) -> list[float]:
         """
-        (label, isbn13) pairs for the book-picker dropdowns. The label is
-        shown to the user; the isbn13 value is what gets passed back to
-        recommend_from_books.
+        Turn search text into a vector in the same space as the books.
         """
-        rows = self.books.sort_values("title")
-        return [(f"{row.title} by {row.authors}", row.isbn13) for row in rows.itertuples()]
+
+        response = client.embeddings.create(
+            model=EMBED_MODEL, input=[text], dimensions=EMBED_DIMENSIONS
+        )
+        return response.data[0].embedding
+
 
     def recommend_from_query(
-            self,
-            query: str,
-            category: str = None,
-            tone: str = None,
-            initial_top_k: int = INITIAL_TOP_K,
-            final_top_k: int = RESULTS_TOP_K,
-    ) -> pd.DataFrame:
-
-        recs = self.db_books.similarity_search(query, k=initial_top_k)
-        books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
-        
-        rank = {isbn: i for i, isbn in enumerate(books_list)}
-        book_recs = self.books[self.books["isbn13"].isin(books_list)].copy() # isin keeps DataFrame order, not similarity order
-        # use rank to preserve similarity order (Chroma returns nearest first)
-        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
-
-        # Narrow, then rank, then cut — doing .head() first would mean the tone
-        # sort only reshuffles books that similarity had already picked.
-        if category != "All":
-            book_recs = book_recs[book_recs["simple_categories"] == category]
-
-        if tone in TONE_COLUMN:
-            book_recs = book_recs.sort_values(by=TONE_COLUMN[tone], ascending=False)
-
-        return book_recs.head(final_top_k)
+        self,
+        query: str,
+        genre: str | None = None,
+        mood: str | None = None,
+        weight: float = POPULARITY_WEIGHT,
+        limit: int = RESULTS_TOP_K,
+    ) -> list[dict]:
+        """
+        The books whose descriptions are nearest to the query.
+        """
     
+        params = {
+            "vec": self.embed_query(query),
+            "genre": genre if genre and genre != "All" else None,
+            "mood": mood if mood and mood != "All" else None,
+            "pool": CANDIDATE_POOL,
+            "weight": weight,
+            "limit": limit,
+        }
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(SEARCH, params).fetchall()
+
 
     def recommend_from_books(
-            self, 
-            picks: list, 
-            initial_top_k: int = INITIAL_TOP_K,
-            final_top_k: int = RESULTS_TOP_K,
-    ):
+        self,
+        picks: list[int],
+        weight: float = POPULARITY_WEIGHT,
+        limit: int = RESULTS_TOP_K,
+    ) -> list[dict]:
         """
-        Recommend books based on a list of picked isbn13s.
-        Averages the picks' embeddings, searches, drops the picks, and keeps
-        only books whose simple_categories matches one of the picks'.
+        Books similar to a set of picked books, excluding the picks themselves.
         """
 
-        picks = [p for p in picks if p]            # drop blank dropdowns
-        picks = list(dict.fromkeys(picks))         # drop duplicate picks, keep order
-        if not picks:
-            return self.books.head(0)              # nothing chosen -> empty result
+        picks = list(dict.fromkeys(p for p in picks if p))   # drop blanks, keep order
+        if not picks: return []
 
-        selected = self.books[self.books["isbn13"].isin(picks)]
-        allowed_categories = set(selected["simple_categories"])
+        with self.pool.connection() as conn:
+            # 1. fetch the picked books' stored vectors
+            rows = conn.execute(PICKED_VECTORS, {"ids": picks}).fetchall()
+            if not rows: return []
 
-        avg = np.mean(self.embeddings.embed_documents(selected["description"].tolist()), axis=0).tolist()
+            # average them
+            vectors = [row[0].to_list() for row in rows]
+            average = [sum(values) / len(values) for values in zip(*vectors)]
 
-        recs = self.db_books.similarity_search_by_vector(avg, k=initial_top_k)
-        isbns = [int(r.page_content.strip('"').split()[0]) for r in recs]
+        params = {
+                "vec": average,
+                "exclude": picks,
+                "pool": CANDIDATE_POOL,
+                "weight": weight,
+                "limit": limit,
+        }
+        with conn.cursor(row_factory=dict_row) as cur:
+            return cur.execute(SIMILAR_TO_PICKS, params).fetchall()
 
-        rank = {isbn: i for i, isbn in enumerate(isbns)}
-        book_recs = self.books[self.books["isbn13"].isin(isbns)].copy()
-        book_recs = book_recs.sort_values(by="isbn13", key=lambda s: s.map(rank))
-        book_recs = book_recs[~book_recs["isbn13"].isin(picks)]
-        book_recs = book_recs[book_recs["simple_categories"].isin(allowed_categories)]  
-        
-        return book_recs.head(final_top_k)
 
-    def search_titles(self, query: str, limit: int = 5):
+    def search_titles(self, query: str, limit: int = 5) -> list[dict]:
         """
-        Find books whose titles contain the query
+        Books whose title contains the query, most-read first.
         """
-        if not query.strip():
+
+        query = query.strip()
+        if len(query) < 2:
             return []
-        mask = self.books["title"].str.contains(query, case=False, na=False, regex=False)
-        hits = self.books[mask].head(limit)
-        return hits[["isbn13", "title", "authors"]].to_dict("records")
+
+        params = {"pattern": f"%{query}%", "limit": limit}
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(SEARCH_TITLES, params).fetchall()

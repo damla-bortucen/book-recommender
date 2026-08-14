@@ -35,15 +35,15 @@
                     class="flex-1 min-w-[12rem] rounded-lg border border-gray-300 px-3 py-2 
                     focus:outline-none focus:ring-2 focus:ring-blue-500">
 
-                <select name="category" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
-                    {% for c in categories %}
-                    <option value="{{ c }}">{{ c }}</option>
+                <select name="genre" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
+                    {% for g in genres %}
+                    <option value="{{ g }}">{{ g }}</option>
                     {% endfor %}
                 </select>
 
-                <select name="tone" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
-                    {% for t in tones %}
-                    <option value="{{ t }}">{{ t }}</option>
+                <select name="mood" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
+                    {% for m in moods %}
+                    <option value="{{ m }}">{{ m }}</option>
                     {% endfor %}
                 </select>
 
