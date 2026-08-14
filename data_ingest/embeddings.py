@@ -6,10 +6,11 @@ import psycopg
 from dotenv import load_dotenv
 from openai import OpenAI
 from pgvector.psycopg import register_vector
+import time
 
 load_dotenv()
 
-client = OpenAI()
+client = OpenAI(max_retries=10)
 
 MODEL = "text-embedding-3-small"
 DIMENSIONS = 512      # reduced from the model's native 1536
@@ -85,6 +86,7 @@ def main() -> None:
 
             done += len(books)
             print(f"{done:,} embedded")
+            time.sleep(3)   # ~19 requests/min keeps us under 1M tokens/min
 
     print(f"done: {done:,} books embedded")
 
