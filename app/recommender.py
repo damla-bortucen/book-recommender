@@ -62,7 +62,7 @@ class BookRecommender:
         moods = cls._top_tags(pool, "moods", tag_limit)
         with pool.connection() as conn:
             book_count = conn.execute(BOOK_COUNT).fetchone()[0] # count returned as a tuple so [0] needed
-        return cls(pool, genres, moods)
+        return cls(pool, genres, moods, book_count)
 
 
     @staticmethod

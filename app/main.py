@@ -3,17 +3,14 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from app.recommender import BookRecommender
-from app.recommender import TONE_COLUMN
 
 app = FastAPI() # the application object
 # tell FastAPI where the template files live
 templates = Jinja2Templates(directory="templates")
-
 app.mount("/static", StaticFiles(directory="static"), name="static") # make static reachable from browser
 
 recommender = BookRecommender.load()
 
-TONES = ["All"] + TONE_COLUMN
 
 @app.get("/")
 def home(request: Request):
@@ -23,9 +20,9 @@ def home(request: Request):
         {
             "title": "Book Recommender",
             "tagline": "Find your next read by describing it.",
-            "book_count": len(recommender.books),
-            "categories": recommender.categories,
-            "tones": TONES,
+            "book_count": recommender.book_count,
+            "genres": ["All"] + recommender.genres,
+            "moods": ["All"] + recommender.moods,
         },
     )
 
@@ -35,14 +32,14 @@ def home(request: Request):
 def search(
     request: Request,
     query: str = Form(...),
-    category: str = Form("All"),
-    tone: str = Form("All"),
+    genre: str = Form("All"),
+    mood: str = Form("All"),
 ): 
-    results = recommender.recommend_from_query(query, category=category, tone=tone)
+    results = recommender.recommend_from_query(query, genre=genre, mood=mood)
     return templates.TemplateResponse(
         request,
         "_results.html",
-        {"books": results.to_dict("records")},
+        {"books": results},
     )
 
 
@@ -62,7 +59,7 @@ def find_similar(request: Request, picks: list[int] = Form([])):
     return templates.TemplateResponse(
         request,
         "_results.html",
-        {"books": results.to_dict("records")},
+        {"books": results},
     )
 
 # run with uvicorn app.main:app --reload (reload makes server autostart when you make a change)
