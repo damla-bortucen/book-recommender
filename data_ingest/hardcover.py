@@ -16,7 +16,7 @@ load_dotenv()
 API_URL = "https://api.hardcover.app/v1/graphql"
 MIN_USERS = 25       # only books with at least this many readers
 TOKEN = os.environ["HARDCOVER_TOKEN"]
-MIN_TAG_COUNT = 2    # ignore tags only one person applied (tags = categories)
+MIN_TAG_COUNT = 1
 PAGE_SIZE = 1000     # Hardcover's maximum
 
 
