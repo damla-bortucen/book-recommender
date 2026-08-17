@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
@@ -60,6 +60,18 @@ def find_similar(request: Request, picks: list[int] = Form([])):
         request,
         "_results.html",
         {"books": results},
+    )
+
+
+@app.get("/book/{book_id}")
+def book_detail(request: Request, book_id: int):
+    book = recommender.get_book(book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return templates.TemplateResponse(
+        request,
+        "_book_detail.html",
+        {"book": book},
     )
 
 # run with uvicorn app.main:app --reload (reload makes server autostart when you make a change)
