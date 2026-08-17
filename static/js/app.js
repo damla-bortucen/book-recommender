@@ -58,17 +58,25 @@ const panels = {
 
 tabButtons.forEach(function (btn) {
     btn.addEventListener('click', function () {
-    const target = btn.dataset.tab;
+        const target = btn.dataset.tab;
 
-    panels.search.classList.toggle('hidden', target !== 'search');  // hide non-active
-    panels.books.classList.toggle('hidden', target !== 'books');
+        panels.search.classList.toggle('hidden', target !== 'search');  // hide non-active
+        panels.books.classList.toggle('hidden', target !== 'books');
 
-    tabButtons.forEach(function (b) {
-        const active = b.dataset.tab === target;
-        b.classList.toggle('border-blue-600', active);
-        b.classList.toggle('text-blue-600', active);
-        b.classList.toggle('border-transparent', !active);
-        b.classList.toggle('text-gray-500', !active);
+        tabButtons.forEach(function (b) {
+            const active = b.dataset.tab === target;
+            b.classList.toggle('border-blue-600', active);
+            b.classList.toggle('text-blue-600', active);
+            b.classList.toggle('border-transparent', !active);
+            b.classList.toggle('text-gray-500', !active);
+        });
     });
+
+    function closeModal() {
+        document.getElementById('modal').innerHTML = '';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
     });
 });
