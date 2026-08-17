@@ -136,15 +136,16 @@ class BookRecommender:
             vectors = [row[0].to_list() for row in rows]
             average = [sum(values) / len(values) for values in zip(*vectors)]
 
-        params = {
+            # 2. search with the average, still on the same connection
+            params = {
                 "vec": average,
                 "exclude": picks,
                 "pool": CANDIDATE_POOL,
                 "weight": weight,
                 "limit": limit,
-        }
-        with conn.cursor(row_factory=dict_row) as cur:
-            return cur.execute(SIMILAR_TO_PICKS, params).fetchall()
+            }
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(SIMILAR_TO_PICKS, params).fetchall()
 
 
     def search_titles(self, query: str, limit: int = 5) -> list[dict]:
