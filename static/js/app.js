@@ -71,12 +71,12 @@ tabButtons.forEach(function (btn) {
             b.classList.toggle('text-gray-500', !active);
         });
     });
+});
 
-    function closeModal() {
-        document.getElementById('modal').innerHTML = '';
-    }
+function closeModal() {
+    document.getElementById('modal').innerHTML = '';
+}
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeModal();
-    });
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
 });
