@@ -14,7 +14,7 @@ load_dotenv()
 
 EMBED_MODEL = "text-embedding-3-small"
 EMBED_DIMENSIONS = 512      # must match the VECTOR(512) column
-RESULTS_TOP_K = 9
+RESULTS_TOP_K = 8
 POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
 CANDIDATE_POOL = 200
 
