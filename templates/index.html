@@ -2,27 +2,32 @@
 <html>
     <head>
         <title>{{ title }}</title>
+         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/static/css/tailwind.css">
         <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
         <script src="/static/js/app.js" defer></script> 
         <!--defer waits until the HTML is fully parsed before running script-->
     </head>
-    <body>
-    <main class="max-w-5xl mx-auto p-6 space-y-4">
-        <header class="text-center space-y-2 py-6 bg-sky-200">
-            <h1 class="text-4xl font-bold tracking-tight text-gray-900">{{ title }}</h1>
-            <p class="text-lg text-gray-750">{{ tagline }}</p>
-            <p class="text-md text-gray-600">{{ "{:,}".format(book_count) }} books to explore</p>
-        </header>
+    <body class="bg-slate-50">
 
+    <header class="bg-sky-200 border-b border-sky-300">
+        <div class="max-w-5xl mx-auto p-5 text-center space-y-2.5">
+            <h1 class="text-4xl font-bold tracking-tight text-slate-800">{{ title }}</h1>
+            <p class="text-lg text-slate-600">{{ tagline }}</p>
+            <p class="text-base text-slate-500">{{ "{:,}".format(book_count) }} books to explore</p>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-6 space-y-6">
          <!-- TAB BAR -->
-        <div class="flex gap-2 border-b border-gray-200">
+        <div class="flex gap-2 border-b border-slate-200">
             <button type="button" data-tab="search"
-                    class="tab-btn px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600">
+                    class="tab-btn px-4 py-2 font-medium border-b-2 border-sky-600 text-sky-600">
                 Search by description
             </button>
             <button type="button" data-tab="books"
-                    class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-gray-500">
+                    class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-slate-500">
                 Find by books
             </button>
         </div>
@@ -32,22 +37,22 @@
             <form hx-post="/search" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML"
                 class="flex flex-wrap items-center gap-3">
                 <input type="text" name="query" placeholder="Describe a book you'd like..."
-                    class="flex-1 min-w-[12rem] rounded-lg border border-gray-300 px-3 py-2 
-                    focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-3 py-2 
+                    focus:outline-none focus:ring-2 focus:ring-sky-500">
 
-                <select name="genre" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
+                <select name="genre" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
                     {% for g in genres %}
                     <option value="{{ g }}">{{ g }}</option>
                     {% endfor %}
                 </select>
 
-                <select name="mood" class="rounded-lg border border-gray-300 bg-white px-3 py-2">
+                <select name="mood" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
                     {% for m in moods %}
                     <option value="{{ m }}">{{ m }}</option>
                     {% endfor %}
                 </select>
 
-                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Search</button>
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Search</button>
             </form>
         </div>
 
@@ -55,28 +60,35 @@
 
          <!-- PANEL 2: find by books (starts hidden) -->
         <div id="panel-books" class="hidden space-y-3">
-            <h3 class="font-semibold text-lg text-gray-900">Or find books like ones you love</h3>
+            <h3 class="font-semibold text-lg text-slate-900">Or find books like ones you love</h3>
 
             <input type="search" id="book-q" name="q" placeholder="Search for a book by title..."
                 hx-get="/book-search"
                 hx-trigger="keyup changed delay:300ms"
                 hx-target="#book-options"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
             <div id="book-options" class="space-y-1"></div>
 
             <form id="books-form" hx-post="/recommend-from-books" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML" class="space-y-3">
-                <p id="pick-count" class="text-sm text-gray-500">0 / 3 selected</p>
+                <p id="pick-count" class="text-sm text-slate-500">0 / 3 selected</p>
                 <div id="chips" class="flex flex-wrap gap-2"></div>
-                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Find similar</button>
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Find similar</button>
             </form>
         </div>
 
-        <br>
-        <div id="loading" class="htmx-indicator flex items-center gap-2 text-gray-500">
-            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></span>
+        <div id="loading" class="htmx-indicator flex items-center gap-2 text-slate-500">
+            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-600"></span>
             Searching…
         </div>
-        <div id="results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+        <div id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div class="col-span-full py-16 text-center">
+                <p class="text-lg font-medium text-slate-700">Nothing here yet</p>
+                <p class="mt-1 text-sm text-slate-500">
+                    Describe a book you'd like above, or switch to “Find by books” and pick up to three you already love.
+                </p>
+            </div>
+        </div>
+        <div id="modal"></div>
 
     </main>
     </body>

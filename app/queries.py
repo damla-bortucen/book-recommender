@@ -59,3 +59,12 @@ ORDER BY users_count DESC
 LIMIT %(limit)s
 """
 # ILIKE is case insensitive LIKE
+
+
+BOOK_DETAIL = """
+SELECT hardcover_id, slug, title, authors, description, cover_url,
+       isbn13, release_year, pages, rating, ratings_count, users_count,
+       genres, moods, content_warnings
+FROM books
+WHERE hardcover_id = %(id)s
+"""
