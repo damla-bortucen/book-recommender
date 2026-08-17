@@ -7,14 +7,17 @@
         <script src="/static/js/app.js" defer></script> 
         <!--defer waits until the HTML is fully parsed before running script-->
     </head>
-    <body>
-    <main class="max-w-5xl mx-auto p-6 space-y-4">
-        <header class="text-center space-y-2 py-6 bg-sky-200">
-            <h1 class="text-4xl font-bold tracking-tight text-gray-900">{{ title }}</h1>
-            <p class="text-lg text-gray-750">{{ tagline }}</p>
-            <p class="text-md text-gray-600">{{ "{:,}".format(book_count) }} books to explore</p>
-        </header>
+    <body class="bg-slate-50">
 
+    <header class="bg-sky-200 border border-sky-300">
+        <div class="max-w-5xl mx-auto p-6 text-center space-y-3">
+            <h1 class="text-4xl font-bold tracking-tight text-slate-800">{{ title }}</h1>
+            <p class="text-lg text-slate-600">{{ tagline }}</p>
+            <p class="text-base text-slate-500">{{ "{:,}".format(book_count) }} books to explore</p>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-6 space-y-6">
          <!-- TAB BAR -->
         <div class="flex gap-2 border-b border-gray-200">
             <button type="button" data-tab="search"

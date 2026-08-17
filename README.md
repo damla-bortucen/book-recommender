@@ -136,6 +136,11 @@ psql "$DATABASE_URL" -f db/indexes.sql
 uvicorn app.main:app --reload
 ```
 
+To get UI watcher running when making changes:
+```bash
+./tailwindcss -i styles/input.css -o static/css/tailwind.css --watch
+```
+
 ---
 
 ## Project layout
