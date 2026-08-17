@@ -1,24 +1,36 @@
 {% for book in books %}
-    <article class="rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition">
-        <img src="{{ book.cover_url or '/static/img/cover_NA.png' }}" alt="cover"
+     <article hx-get="/book/{{ book.hardcover_id }}" hx-target="#modal" hx-swap="innerHTML"
+            class="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+        <img src="{{ book.cover_url or '/static/img/cover_NA.png' }}" alt="Cover of {{ book.title }}"
             loading="lazy"
             onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
-            class="w-full h-60 object-contain bg-gray-100 rounded-lg mb-3">
+            class="aspect-[2/3] w-full object-cover bg-slate-100">
 
-        <h3 class="font-semibold text-gray-900 line-clamp-2">{{ book.title }}</h3>
+        <div class="flex flex-1 flex-col p-4">
+            <h3 class="font-semibold line-clamp-2">{{ book.title }}</h3>
 
-        <p class="text-sm text-gray-600 mb-1">
-            <em>{{ book.authors | join(", ") if book.authors else "Unknown author" }}</em>
-        </p>
+            <p class="mt-1 text-sm text-slate-600 line-clamp-1">
+                {{ book.authors | join(", ") if book.authors else "Unknown author" }}
+            </p>
 
-        <p class="text-xs text-gray-500 mb-2">
-            {% if book.rating %}★ {{ "%.1f"|format(book.rating) }} · {% endif %}
-            {{ "{:,}".format(book.users_count) }} readers
-            {% if book.release_year %} · {{ book.release_year }}{% endif %}
-        </p>
+            <p class="mt-1 text-xs text-slate-500">
+                {% if book.rating %}★ {{ "%.1f"|format(book.rating) }} · {% endif %}
+                {{ "{:,}".format(book.users_count) }} readers
+                {% if book.release_year %} · {{ book.release_year }}{% endif %}
+            </p>
 
-        <p class="text-sm text-gray-700 line-clamp-3">{{ book.description | truncate(220) }}</p>
+            {% if book.genres %}
+            <div class="mt-2 flex flex-wrap gap-1">
+                {% for g in book.genres[:2] %}
+                <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">{{ g }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+        </div>
     </article>
 {% else %}
-    <p class="text-gray-600">No matches found.</p>
+    <p class="col-span-full py-8 text-center text-slate-600">
+        No matches found. Try a broader description, or set the filters back to “All”.
+    </p>
 {% endfor %}
