@@ -8,7 +8,7 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES, BOOK_COUNT
+from app.queries import PICKED_VECTORS, SEARCH, SIMILAR_TO_PICKS, TOP_TAGS, SEARCH_TITLES, BOOK_COUNT, BOOK_DETAIL
 
 load_dotenv()
 
@@ -161,3 +161,13 @@ class BookRecommender:
         with self.pool.connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 return cur.execute(SEARCH_TITLES, params).fetchall()
+
+
+    def get_book(self, book_id: int) -> dict | None:
+        """
+        One book's full row, for the detail modal.
+        """
+
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                return cur.execute(BOOK_DETAIL, {"id": book_id}).fetchone()
