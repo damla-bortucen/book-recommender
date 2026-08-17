@@ -28,7 +28,7 @@ function addPick(bookId, label) {
 
     // visible chip
     const chip = document.createElement('span');
-    chip.className = 'inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800';
+    chip.className = 'inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-sm text-sky-800';
 
     const text = document.createElement('span');
     text.textContent = label;
@@ -38,7 +38,7 @@ function addPick(bookId, label) {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = '×';
-    remove.className = 'font-bold leading-none text-blue-500 hover:text-blue-800';
+    remove.className = 'font-bold leading-none text-sky-500 hover:text-sky-800';
     remove.addEventListener('click', function () {
     hidden.remove();   // stop it being submitted
     chip.remove();     // remove the visible chip
@@ -65,10 +65,10 @@ tabButtons.forEach(function (btn) {
 
         tabButtons.forEach(function (b) {
             const active = b.dataset.tab === target;
-            b.classList.toggle('border-blue-600', active);
-            b.classList.toggle('text-blue-600', active);
+            b.classList.toggle('border-sky-600', active);
+            b.classList.toggle('text-sky-600', active);
             b.classList.toggle('border-transparent', !active);
-            b.classList.toggle('text-gray-500', !active);
+            b.classList.toggle('text-slate-500', !active);
         });
     });
 });
