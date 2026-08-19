@@ -103,6 +103,34 @@ Full run: 62 requests, about 3 minutes.
 
 > Scheduled workflows are disabled after 60 days of repository inactivity.
 
+### 6. Ship — `.github/workflows/ci.yml` + `render.yaml`
+
+```
+PR ──▶ tests ──┐
+               ├──▶ merge to main ──▶ tests ──▶ deploy hook ──▶ Render
+               ┘
+```
+
+Tests run on every pull request and on `main`. The deploy job `needs` the test
+job, so a failing suite means no deploy at all — rather than a red build sitting
+next to a broken live site.
+
+```yaml
+deploy:
+  needs: test
+  if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+```
+
+Render's `autoDeploy` is **off**; deploys are triggered by a hook from CI, not
+by the push itself. The tests are integration tests — importing `app.main` opens
+a real connection pool — so CI uses the same `DATABASE_URL` and `OPENAI_API_KEY`
+secrets as the refresh workflow.
+
+| Test file | Covers |
+| --- | --- |
+| `tests/test_contract.py` | `EMBED_DIMENSIONS`, `DIMENSIONS` and `VECTOR(512)` still agree |
+| `tests/test_routes.py` | every route returns what the templates expect |
+
 ---
 
 ## Tech stack
@@ -184,6 +212,10 @@ db/
   indexes.sql      B-tree / GIN / HNSW, built after loading
 .github/workflows/
   refresh-catalogue.yml   weekly re-run of both ingest scripts
+  ci.yml                  tests on PRs; deploys main once they pass
+tests/
+  test_contract.py   the 512-dimension three-way contract
+  test_routes.py     route smoke tests
 render.yaml        deploy blueprint (web service, us-east-1)
 templates/         index.html + HTMX partials
 static/            generated CSS, picker JS, fallback cover
@@ -195,8 +227,8 @@ README.md
 
 ## Future improvements
 
-- evaluation/testing
-- deployment
+- offline evaluation — measure recommendation quality, and test whether the
+  popularity weight and 512 dimensions actually earn their place
 - let the popularity weight be tuned from the UI
 - use `content_warnings` as an exclusion filter
 - a personal shelf (TBR) — the first feature that would need writes
