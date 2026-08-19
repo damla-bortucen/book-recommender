@@ -1,0 +1,7 @@
+# Test-only dependencies.
+
+-r requirements.txt
+pytest==9.1.1
+
+# starlette's TestClient prefers httpx2
+httpx2==2.12.0

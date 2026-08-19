@@ -8,6 +8,11 @@ you already love and get recommendations from the average of their vectors.
 Built on the [Hardcover](https://hardcover.app) catalogue, stored in **Postgres +
 pgvector**, served by **FastAPI + HTMX**.
 
+**[Live demo →](https://book-recommender-jaz2.onrender.com/)**
+*Hosted on Render's free tier, so the first request after a quiet spell takes a minute to wake.*
+
+Or run it locally:
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -179,6 +184,7 @@ db/
   indexes.sql      B-tree / GIN / HNSW, built after loading
 .github/workflows/
   refresh-catalogue.yml   weekly re-run of both ingest scripts
+render.yaml        deploy blueprint (web service, us-east-1)
 templates/         index.html + HTMX partials
 static/            generated CSS, picker JS, fallback cover
 NOTES.md           working notes on storage, pgvector, indexing, API behaviour
