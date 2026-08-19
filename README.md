@@ -51,14 +51,14 @@ WITH candidates AS (
 -- stage 2: re-rank those 200 by meaning *and* readership
 SELECT * FROM candidates
 ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
-LIMIT 9;
+LIMIT 8;
 ```
 
 The `ln()` is used because otherwise reader counts (spanning 25 → 18,341) overpower the similarity
 ranking completely. Log compresses the range so popularity only has a slight impact on results.
 
 Filter in stage 1, so a genre or mood narrows the candidate pool rather than
-shrinking the final nine.
+shrinking the final eight.
 
 **Find by books** fetches the picked books' stored vectors, averages them in Python,
 and searches with the result, excluding the picks from their own results.
@@ -73,9 +73,30 @@ No build step, no SPA — routes return HTML fragments that get swapped into the
   three and get recommendations from your average taste vector.
 - Results render as a cover gallery, falling back to a placeholder when a book has no cover.
 
----
+### 5. Refresh — `.github/workflows/refresh-catalogue.yml`
 
-Notes on the reasoning behind design choices are in `NOTES.md`. 
+The catalogue goes stale, so a scheduled GitHub Action re-runs the pipeline weekly:
+
+```yaml
+on:
+  schedule:
+    - cron: "17 4 * * 0"   # Sundays 04:17 UTC
+  workflow_dispatch: {}    # plus a "Run workflow" button
+```
+
+Both steps run unchanged:
+
+```bash
+python -m data_ingest.hardcover     # upsert, so re-running refreshes
+python -m data_ingest.embeddings    # only books whose vector is NULL
+```
+
+It re-fetches everything rather than syncing incrementally in a 7-day window.
+Full run: 62 requests, about 3 minutes.
+
+`DATABASE_URL`, `OPENAI_API_KEY` and `HARDCOVER_TOKEN` are stored as repository secrets.
+
+> Scheduled workflows are disabled after 60 days of repository inactivity.
 
 ---
 
@@ -156,6 +177,8 @@ data_ingest/
 db/
   schema.sql       table + pgvector extension
   indexes.sql      B-tree / GIN / HNSW, built after loading
+.github/workflows/
+  refresh-catalogue.yml   weekly re-run of both ingest scripts
 templates/         index.html + HTMX partials
 static/            generated CSS, picker JS, fallback cover
 NOTES.md           working notes on storage, pgvector, indexing, API behaviour
@@ -170,7 +193,7 @@ README.md
 - deployment
 - let the popularity weight be tuned from the UI
 - use `content_warnings` as an exclusion filter
-- incremental refresh to keep books up to date
+- a personal shelf (TBR) — the first feature that would need writes
 
 ###### Acknowledgments
 Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);

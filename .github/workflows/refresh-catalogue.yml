@@ -1,0 +1,38 @@
+name: Refresh catalogue
+
+on:
+  schedule:
+    # Sundays at 04:17 UTC.
+    - cron: "17 4 * * 0"
+  workflow_dispatch: {}   # adds a "Run workflow" button for manual runs
+
+concurrency: # stops two runs overlapping (if u click run while the schedule is running)
+  group: refresh-catalogue
+  cancel-in-progress: false   # let a running sync finish rather than killing it mid-page
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      HARDCOVER_TOKEN: ${{ secrets.HARDCOVER_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull catalogue from Hardcover
+        run: python -m data_ingest.hardcover
+
+      - name: Embed new and changed books
+        run: python -m data_ingest.embeddings

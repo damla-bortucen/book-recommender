@@ -116,7 +116,7 @@ SET hnsw.ef_search = 100;                 -- candidates held while walking
 here because stage 2 re-ranks them anyway. `strict_order` preserves ordering but is slower.
 Raising `ef_search` trades speed for recall.
 
-This is also why the query pulls a pool of 200 and re-ranks down to 9: a wide first stage
+This is also why the query pulls a pool of 200 and re-ranks down to 8: a wide first stage
 leaves enough survivors for the filter and the popularity weighting to work with.
 
 ---
@@ -241,6 +241,25 @@ rows. Add a unique tiebreaker: `order_by: [{users_count: desc}, {id: asc}]`.
 
 **Read the token format.** Hardcover's token already includes the `Bearer ` prefix. Adding
 a second one gives "Unable to verify token", which reads like an expired token.
+
+---
+
+## Keeping the catalogue fresh
+
+The catalogue goes stale, so a scheduled GitHub Action re-runs the pipeline weekly to re-ingest books and update embeddings.
+
+This workflow runs on a clock, tests nothing and deploys nothing. GitHub Actions is a
+general-purpose event runner for this **scheduled ETL job**.
+
+#### Actions vs. cron
+
+The first row decided it. On macOS plain `cron` doesn't fire at all if the machine is
+asleep at that moment (`launchd` with `StartCalendarInterval` does catch up on wake) — so a
+weekly laptop job realistically runs about half the time.
+
+Remember about the scheduler:
+- **Scheduled workflows are disabled after 60 days of repo inactivity.** It emails you and
+  then silently stops.
 
 ---
 
