@@ -73,6 +73,3 @@ def test_recommend_from_books(client, a_book_id):
     response = client.post("/recommend-from-books", data={"picks": [a_book_id]})
     assert response.status_code == 200
     assert "<article" in response.text
-
-
-# TODO: test against posting to recommend-from-books with no picks
