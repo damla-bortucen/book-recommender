@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: book-recommender
+    runtime: python
+    plan: free
+    region: virginia           # next to the Neon database (us-east-1)
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT      # locally uvicorn uses 127.0.0.1 which only accepts connections from the same machine
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      # sync: false, so secrets never enter the repo
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
