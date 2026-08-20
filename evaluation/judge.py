@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from app.recommender import BookRecommender
-from evaluation.test_queries import QUERIES
+from evaluation.queries import QUERIES
 
 load_dotenv()
 
