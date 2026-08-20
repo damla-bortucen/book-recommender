@@ -73,3 +73,18 @@ def test_recommend_from_books(client, a_book_id):
     response = client.post("/recommend-from-books", data={"picks": [a_book_id]})
     assert response.status_code == 200
     assert "<article" in response.text
+
+
+def test_apostrophe_style_does_not_matter(client):
+    """
+    Hardcover titles use both ' and ’, so either spelling must find the same books.
+    """
+
+    straight = client.get("/book-search", params={"q": "handmaid's tale"})
+    curly = client.get("/book-search", params={"q": "handmaid\u2019s tale"})
+
+    straight_ids = re.findall(r'data-id="(\d+)"', straight.text)
+    curly_ids = re.findall(r'data-id="(\d+)"', curly.text)
+
+    assert straight_ids, "no results for a straight apostrophe"
+    assert straight_ids == curly_ids

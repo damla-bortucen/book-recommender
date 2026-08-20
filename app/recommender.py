@@ -29,8 +29,11 @@ def _configure(conn) -> None:
     # doesnt guarantee distance order but faster
     conn.execute("SET hnsw.iterative_scan = relaxed_order") 
 
-    # how many candidate nodes to hold while walking the graph
-    conn.execute("SET hnsw.ef_search = 100")
+    # ef_serach is how many candidate nodes to hold while walking the graph
+    # the algorithm keeps a shortlist of the best candidates so far, and keeps exploring outward from all of them
+    # when its full, the worst candidate gets evicted and its neighbors are never explored
+    # so ef_search must be at least as large as the number of rows you ask for
+    conn.execute("SET hnsw.ef_search = 400")
 
 
 class BookRecommender:
@@ -153,7 +156,9 @@ class BookRecommender:
         Books whose title contains the query, most-read first.
         """
 
-        query = query.strip()
+        # match the fold applied to the column, so a curly ’ typed by the user
+        # (macOS smart quotes) still matches a straight-quoted title
+        query = query.strip().replace("\u2019", "'").replace("\u2018", "'")
         if len(query) < 2:
             return []
 

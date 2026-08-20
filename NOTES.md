@@ -102,22 +102,61 @@ then pass the result (two fast round trips rather than one slow join).
 
 - **`vector_cosine_ops` must match the operator queried with** (`<=>`). Build for cosine
   then query with `<->` and the index is silently ignored.
-- **HNSW is approximate.** It may not return the exact same 8 rows as a full scan — it
-  trades a little recall for a lot of speed. Tune per query with `ef_search`.
+- **HNSW is approximate.** It may not return the same rows as a full scan — it trades
+  recall for speed. How *much* recall is set by `ef_search`, and the loss is not always
+  small: see below.
 
 #### why `iterative_scan` is set
 
 ```sql
 SET hnsw.iterative_scan = relaxed_order;  -- keep walking until LIMIT is filled
-SET hnsw.ef_search = 100;                 -- candidates held while walking
+SET hnsw.ef_search = 400;                 -- candidates held while walking
 ```
 
 `relaxed_order` allows results to come back not perfectly distance-ordered, which is fine
 here because stage 2 re-ranks them anyway. `strict_order` preserves ordering but is slower.
-Raising `ef_search` trades speed for recall.
 
 This is also why the query pulls a pool of 200 and re-ranks down to 8: a wide first stage
 leaves enough survivors for the filter and the popularity weighting to work with.
+
+#### `ef_search` has a floor, and below it the index is silently wrong
+
+Searching HNSW is a **walk**, not a lookup. Start at a node, move to whichever neighbour
+is closer to the query, repeat. Pure greedy walking gets stuck, so the algorithm keeps a
+**shortlist of the best candidates so far** and keeps exploring outward from all of them.
+`ef_search` is the length of that shortlist.
+
+When the shortlist is full, the worst entry is evicted — **and an evicted node's
+neighbours are never explored.** If a mediocre node was the only bridge to an excellent
+match, that match becomes unreachable. Not ranked low. Never seen.
+
+So it isn't only "speed vs recall". It's a **hard floor**:
+
+```
+stage 1 asks the index for   CANDIDATE_POOL = 200 rows
+the walk may hold at most    ef_search
+```
+
+`ef_search < CANDIDATE_POOL` cannot be correct — it's returning 200 rows from a process
+that never holds 200. **Rule: `ef_search >= CANDIDATE_POOL`, and roughly double is a sane
+default. Raising `CANDIDATE_POOL` means raising this too.**
+
+Measured on the 45 evaluation cases (`evaluation/`), the corpus at ~61k books:
+
+| `ef_search` | hit@8 | MRR | median |
+| --- | --- | --- | --- |
+| 100 | 34/45 | 0.693 | 123.7 ms |
+| 200 | 34/45 | 0.693 | 123.0 ms |
+| **400** | **37/45** | **0.759** | 129.2 ms |
+| 800 | 37/45 | 0.759 | 133.0 ms |
+
+At 100, *The Metamorphosis* — true rank **3** for "a man wakes as an insect and his family
+slowly turns against him" — was absent from the top **200** entirely. 200 doesn't help
+either: exactly enough slots leaves no slack to explore. 800 finds nothing 400 missed, so
+400 is the knee. Recall climbs then flattens while cost keeps rising; tune to the knee.
+
+(Those timings are laptop → Neon in us-east-1, so mostly network. The ~5 ms *difference*
+is the real index cost.)
 
 ---
 
