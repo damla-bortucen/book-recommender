@@ -9,7 +9,7 @@ def main() -> None:
     for weight in (0.0, 0.02, 0.05, 0.1, 0.2):
         hits = 0
         for query, expected_title in CASES:
-            matches = recommender.search_titles(expected_title, limit=1)
+            matches = recommender .search_titles(expected_title, limit=1)
             if not matches:
                 print(f"?     no book in the catalogue called {expected_title!r}")
                 continue

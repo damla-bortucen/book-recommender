@@ -1,0 +1,26 @@
+""" Open-ended queries - no single right answer, they mimic actual user queries  """
+
+QUERIES = [
+    "something funny to read on a plane",
+    "a comforting book for when you're feeling low",
+    "hard science fiction with realistic physics",
+    "a book to teach children about nature",
+    "slow atmospheric horror rather than gore",
+    "a novel about grief that isn't sentimental",
+    "epic fantasy driven by political intrigue rather than magic",
+    "a mystery set somewhere snowy and isolated",
+    "a thriller with an unreliable narrator",
+    "workplace satire",
+    "books about how cities are built and how they work",
+    "science writing about the ocean",
+    "a history of medicine for a general reader",
+    "philosophy that's genuinely readable",
+    "a coming-of-age story in a small town",
+    "books about friendship between women",
+    "short stories about leaving home for another country",
+    "a romance without a love triangle",
+    "true crime that treats the victims with respect",
+    "cosy books about running a small shop",
+    "something to read after a breakup",
+    "a memoir by someone who changed careers late",
+]
