@@ -27,6 +27,14 @@ Title: {title}
 Author: {authors}
 Description: {description}
 
+A search may state several constraints at once — topic, audience, format, tone,
+or things to avoid. A good recommendation satisfies ALL of them, not just the
+topic.
+
+Answer NO if the book breaks any stated constraint, however well it matches the
+subject: an adult book when the reader asked for children's books; a novel when
+they asked for short stories
+
 Would this book be a good recommendation for that search?
 Answer with one word only: YES or NO."""
 
@@ -42,7 +50,10 @@ def save_cache(cache: dict) -> None:
 def judge(query: str, book: dict, cache: dict) -> bool:
     """True if the judge thinks this book answers the query."""
 
-    key = f"{query}|{book['hardcover_id']}"
+    PROMPT_VERSION = 2
+
+    key = f"v{PROMPT_VERSION}|{query}|{book['hardcover_id']}"
+
     if key in cache:
         return cache[key]
 
