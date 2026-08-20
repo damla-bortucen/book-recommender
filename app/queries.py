@@ -54,11 +54,13 @@ LIMIT %(limit)s
 SEARCH_TITLES = """
 SELECT hardcover_id, title, authors, cover_url, users_count
 FROM books
-WHERE title ILIKE %(pattern)s
+WHERE translate(title, $$’‘$$, $$''$$) ILIKE %(pattern)s
 ORDER BY users_count DESC
 LIMIT %(limit)s
 """
 # ILIKE is case insensitive LIKE
+# translate() folds curly quotes to straight ones: Hardcover's titles use both,
+# so a literal match misses "The Handmaid’s Tale" when you type a normal '
 
 
 BOOK_DETAIL = """

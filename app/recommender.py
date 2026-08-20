@@ -156,7 +156,9 @@ class BookRecommender:
         Books whose title contains the query, most-read first.
         """
 
-        query = query.strip()
+        # match the fold applied to the column, so a curly ’ typed by the user
+        # (macOS smart quotes) still matches a straight-quoted title
+        query = query.strip().replace("\u2019", "'").replace("\u2018", "'")
         if len(query) < 2:
             return []
 
