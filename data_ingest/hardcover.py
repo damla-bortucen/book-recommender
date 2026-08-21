@@ -10,6 +10,7 @@ import httpx
 import psycopg
 from dotenv import load_dotenv
 from datetime import date
+import math
 
 load_dotenv()
 
@@ -17,18 +18,19 @@ load_dotenv()
 API_URL = "https://api.hardcover.app/v1/graphql"
 MIN_USERS = 25       # only books with at least this many readers
 TOKEN = os.environ["HARDCOVER_TOKEN"]
-MIN_TAG_COUNT = 1
+MIN_TAG_COUNT = 1      # absolute floor
+MIN_TAG_RATIO = 0.2    # ...and at least this share of the book's own top tag
 PAGE_SIZE = 1000     # Hardcover's maximum
 
 
 QUERY = """
-query Books($limit: Int!, $offset: Int!, $minUsers: Int!) {
+query Books($limit: Int!, $offset: Int!, $minUsers: Int!, $today: date!) {
   books(
     limit: $limit
     offset: $offset
     where: {
         users_count: {_gte: $minUsers}, 
-        description: {_is_null: false}}
+        description: {_is_null: false}
         # skip unreleased books — a recommendation you can't go and read is noise.
         # release_date beats release_year: it also catches titles due later this year.
         _or: [
@@ -107,9 +109,22 @@ def fetch(limit: int, offset: int = 0) -> list[dict]:
 def tags(cached: dict | None, category: str) -> list[str]:
     """
     One category out of cached_tags, most-applied first, weak tags dropped.
+
+    The threshold is relative to a book's most-applied tag. Depending on how many 
+    people have read it, a tag by one person may very in significance.
+    
+    Removes the long tail on well-tagged books, to reduce noise
+    (The Great Gatsby carries a count=1 "Biography").
     """
+
     items = (cached or {}).get(category) or []
-    kept = [i for i in items if i.get("count", 0) >= MIN_TAG_COUNT]
+    if not items:
+        return []
+
+    top = max(i.get("count", 0) for i in items)
+    floor = max(MIN_TAG_COUNT, math.ceil(top * MIN_TAG_RATIO))
+
+    kept = [i for i in items if i.get("count", 0) >= floor]
     kept.sort(key=lambda i: i["count"], reverse=True)
     return [i["tag"] for i in kept]
 
