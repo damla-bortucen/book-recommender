@@ -284,7 +284,14 @@ The two evaluation tiers measure different goals and favor different weights:
 
 Tier 1 is biased toward fame because its cases were written from memory. The median target book is in the **99.9th percentile** by reader count, so this tier overstates the general value of popularity.
 
-**Conclusion:** one global weight handles two different jobs imperfectly. Exposing the popularity weight in the UI is more useful than further tuning a single constant.
+### User Options (Hidden Gems / Balanced / Well Known)
+Users have the option to choose how popularity impact the results to their query. So `/search` takes one of three preset names (`gems` / `balanced` / `popular` → 0 / 0.02 / 0.05) and looks the weight up server-side.
+
+Taking a name, not a number: a posted `weight=99999` would rank purely by reader count and ignore the query. A radio group constrains the browser, not the request.
+
+Nothing above `0.05` is offered — `0.1` and `0.2` scored identically to `0.05`.
+
+**Conclusion:** one global weight handles two different jobs imperfectly, and the system can't tell which the user is doing.
 
 ---
 
