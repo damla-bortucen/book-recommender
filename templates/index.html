@@ -61,7 +61,7 @@
                         {% for value in popularity_presets %}
                         <label class="flex cursor-pointer items-center gap-2 text-sm text-muted">
                             <input type="radio" name="popularity" value="{{ value }}"
-                                {% if value ==comm popularity_default %}checked{% endif %}
+                                {% if value == popularity_default %}checked{% endif %}
                                 class="accent-accent">
                             {{ labels.get(value, value) }}
                         </label>
@@ -75,21 +75,35 @@
 
         <!---------------------------rec-by-books------------------------->
 
-         <!-- PANEL 2: find by books (starts hidden) -->
-        <div id="panel-books" class="hidden space-y-3">
-            <h3 class="font-semibold text-lg text-slate-900">Or find books like ones you love</h3>
+        <!-- PANEL 2: find by books (starts hidden) -->
+        <div id="panel-books" class="hidden pt-5">
 
-            <input type="search" id="book-q" name="q" placeholder="Search for a book by title..."
-                hx-get="/book-search"
-                hx-trigger="keyup changed delay:300ms"
-                hx-target="#book-options"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
-            <div id="book-options" class="space-y-1"></div>
+            <!-- the dropdown anchors to this wrapper, so it hangs off the input
+                 rather than off the bottom of the panel -->
+            <div class="relative max-w-2xl">
+                <label class="sr-only" for="book-q">Search for a book by title</label>
+                <input type="search" id="book-q" name="q" placeholder="Search for a book by title…"
+                    autocomplete="off"
+                    hx-get="/book-search"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#book-options"
+                    class="w-full border-0 border-b-2 border-line bg-transparent py-3 font-display text-2xl
+                           placeholder:text-muted/60 focus:border-accent focus:outline-none
+                           disabled:cursor-not-allowed disabled:opacity-50">
 
-            <form id="books-form" hx-post="/recommend-from-books" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML" class="space-y-3">
-                <p id="pick-count" class="text-sm text-slate-500">0 / 3 selected</p>
-                <div id="chips" class="flex flex-wrap gap-2"></div>
-                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Find similar</button>
+                <!-- HTMX swaps the options in here; CSS hides it while empty -->
+                <div id="book-options"
+                     class="absolute top-full z-20 max-h-64 w-full overflow-auto border border-line
+                            bg-panel shadow-lg shadow-ink/10"></div>
+            </div>
+
+            <form id="books-form" hx-post="/recommend-from-books" hx-indicator="#loading"
+                  hx-target="#results" hx-swap="innerHTML" class="max-w-2xl">
+                <div class="mt-5 flex flex-wrap items-center gap-2">
+                    <div id="chips" class="contents"></div>
+                    <p id="pick-count" class="text-xs text-muted">0 / 3 selected</p>
+                </div>
+                <button type="submit" class="btn mt-5">Find similar</button>
             </form>
         </div>
 

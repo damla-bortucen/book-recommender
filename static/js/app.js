@@ -28,7 +28,7 @@ function addPick(bookId, label) {
 
     // visible chip
     const chip = document.createElement('span');
-    chip.className = 'inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-sm text-sky-800';
+    chip.className = 'chip';
 
     const text = document.createElement('span');
     text.textContent = label;
@@ -38,16 +38,18 @@ function addPick(bookId, label) {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = '×';
-    remove.className = 'font-bold leading-none text-sky-500 hover:text-sky-800';
+    remove.className = 'chip-remove';
+    
     remove.addEventListener('click', function () {
-    hidden.remove();   // stop it being submitted
-    chip.remove();     // remove the visible chip
+        hidden.remove();      // stop it being submitted
+        chip.remove();        // remove the visible chip
+        updateFeedback();     // and let the counter and the input catch up
     });
     chip.appendChild(remove);
-    updateFeedback();
 
     chips.appendChild(chip);
     updateFeedback();
+    closeOptions();
 }
 
 const tabButtons = document.querySelectorAll('.tab-btn');
@@ -55,6 +57,15 @@ const panels = {
     search: document.getElementById('panel-search'),
     books: document.getElementById('panel-books'),
 };
+
+// Emptying it is what hides it: #book-options:not(:has(*)) is display:none.
+function closeOptions() {
+    document.getElementById('book-options').innerHTML = '';
+}
+
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#panel-books')) closeOptions();
+});
 
 tabButtons.forEach(function (btn) {
     btn.addEventListener('click', function () {

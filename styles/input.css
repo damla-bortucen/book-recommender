@@ -45,10 +45,32 @@
 
     /* w-full: a bare <select> sizes itself to its widest <option>, and
        some genre names are long enough to push the page wider than a phone. 
-       w-full sets the boundary as ...
+       w-full sets the boundary as replaces that content-based sizing with "as wide as the
+       parent", so a long option is truncated
     */
     .field {
         @apply rounded-lg w-full border border-line bg-panel px-3 py-2.5 text-sm text-ink
                focus:outline-2 focus:outline-offset-2 focus:outline-accent;
     }
+
+    .option {
+        @apply block w-full cursor-pointer px-4 py-3 text-left hover:bg-line/40;
+    }
+
+    .chip {
+        @apply inline-flex items-center gap-1.5 rounded-full border border-line
+               bg-panel px-3 py-1 text-sm text-ink;
+    }
+
+    .chip-remove {
+        @apply cursor-pointer font-bold leading-none text-accent hover:text-ink;
+    }
+}
+
+
+/* HTMX owns the contents of #book-options, so let CSS decide when it shows
+   rather than adding JavaScript to toggle it. 
+*/
+#book-options:not(:has(*)) {
+    display: none;
 }
