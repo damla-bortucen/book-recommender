@@ -74,3 +74,14 @@
 #book-options:not(:has(*)) {
     display: none;
 }
+
+/* htmx's built-in indicator CSS only animates opacity, so an idle spinner
+   still reserves a blank row above the results. Collapse it out of the
+   layout; htmx puts .htmx-request on the hx-indicator target mid-flight. */
+#loading {
+    display: none;
+}
+
+#loading.htmx-request {
+    display: flex;
+}

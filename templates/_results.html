@@ -1,36 +1,36 @@
 {% for book in books %}
-     <article hx-get="/book/{{ book.hardcover_id }}" hx-target="#modal" hx-swap="innerHTML"
-            class="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+    <article hx-get="/book/{{ book.hardcover_id }}" hx-target="#modal" hx-swap="innerHTML"
+             tabindex="0" role="button"
+             class="group cursor-pointer focus:outline-2 focus:outline-offset-4 focus:outline-accent">
+
         <img src="{{ book.cover_url or '/static/img/cover_NA.png' }}" alt="Cover of {{ book.title }}"
-            loading="lazy"
-            onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
-            class="aspect-[2/3] w-full object-cover bg-slate-100">
+             loading="lazy"
+             onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
+             class="aspect-[2/3] w-full rounded-lg bg-line/60 object-cover transition-opacity group-hover:opacity-85">
 
-        <div class="flex flex-1 flex-col p-4">
-            <h3 class="font-semibold line-clamp-2">{{ book.title }}</h3>
+        <h3 class="mt-3.5 font-display text-xl leading-tight line-clamp-2 group-hover:text-accent">{{ book.title }}</h3>
 
-            <p class="mt-1 text-sm text-slate-600 line-clamp-1">
-                {{ book.authors | join(", ") if book.authors else "Unknown author" }}
-            </p>
+        <p class="mt-0.5 text-sm text-muted line-clamp-1">
+            {{ book.authors | join(", ") if book.authors else "Unknown author" }}
+        </p>
 
-            <p class="mt-1 text-xs text-slate-500">
-                {% if book.rating %}★ {{ "%.1f"|format(book.rating) }} · {% endif %}
-                {{ "{:,}".format(book.users_count) }} readers
-                {% if book.release_year %} · {{ book.release_year }}{% endif %}
-            </p>
+        <p class="mt-1.5 text-xs text-muted">
+            {% if book.rating %}<span class="text-accent">★ {{ "%.1f"|format(book.rating) }}</span> · {% endif %}
+            {{ "{:,}".format(book.users_count) }} readers
+            {% if book.release_year %} · {{ book.release_year }}{% endif %}
+        </p>
 
-            {% if book.genres %}
-            <div class="mt-2 flex flex-wrap gap-1">
-                {% for g in book.genres[:2] %}
-                <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">{{ g }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
-            
+        {% if book.genres %}
+        <div class="mt-2 flex flex-wrap gap-1">
+            {% for g in book.genres[:2] %}
+            <span class="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">{{ g }}</span>
+            {% endfor %}
         </div>
+        {% endif %}
+
     </article>
 {% else %}
-    <p class="col-span-full py-8 text-center text-slate-600">
+    <p class="col-span-full border-y border-line py-14 text-center text-muted">
         No matches found. Try a broader description, or set the filters back to “All”.
     </p>
 {% endfor %}
