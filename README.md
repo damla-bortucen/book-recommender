@@ -1,4 +1,4 @@
-# Book Recommender
+# BookMarked
 
 A semantic book recommendation engine. Describe the book you want in plain language —
 *"a book to teach children about nature"* and it returns matching books by comparing

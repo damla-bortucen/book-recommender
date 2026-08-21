@@ -18,7 +18,7 @@ def home(request: Request):
         request,
         "index.html",
         {
-            "title": "Book Recommender",
+            "title": "BookMarked",
             "tagline": "Find your next read by describing it.",
             "book_count": recommender.book_count,
             "genres": ["All"] + recommender.genres,
