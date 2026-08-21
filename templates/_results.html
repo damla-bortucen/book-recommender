@@ -1,12 +1,11 @@
+{% import "_macros.html" as ui %}
+
 {% for book in books %}
     <article hx-get="/book/{{ book.hardcover_id }}" hx-target="#modal" hx-swap="innerHTML"
              tabindex="0" role="button"
              class="group cursor-pointer focus:outline-2 focus:outline-offset-4 focus:outline-accent">
 
-        <img src="{{ book.cover_url or '/static/img/cover_NA.png' }}" alt="Cover of {{ book.title }}"
-             loading="lazy"
-             onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
-             class="aspect-[2/3] w-full rounded-lg bg-line/60 object-cover transition-opacity group-hover:opacity-85">
+        {{ ui.cover(book, "aspect-[2/3] w-full transition-opacity group-hover:opacity-85") }}
 
         <h3 class="mt-3.5 font-display text-xl leading-tight line-clamp-2 group-hover:text-accent">{{ book.title }}</h3>
 
@@ -14,11 +13,7 @@
             {{ book.authors | join(", ") if book.authors else "Unknown author" }}
         </p>
 
-        <p class="mt-1.5 text-xs text-muted">
-            {% if book.rating %}<span class="text-accent">★ {{ "%.1f"|format(book.rating) }}</span> · {% endif %}
-            {{ "{:,}".format(book.users_count) }} readers
-            {% if book.release_year %} · {{ book.release_year }}{% endif %}
-        </p>
+        {{ ui.meta(book, classes="mt-1.5") }}
 
         {% if book.genres %}
         <div class="mt-2 flex flex-wrap gap-1">

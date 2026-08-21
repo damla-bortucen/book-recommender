@@ -1,6 +1,13 @@
-@import "tailwindcss";
-@source "../templates/**/*.html";
-@source "../static/**/*.js";
+/* Tailwind source. Build with:
+   ./tailwindcss -i static/css/input.css -o static/css/tailwind.css   */
+
+/* source(none) turns off Tailwind's automatic file detection. It matters now
+   that this file sits beside the generated tailwind.css — without it the build
+   would scan its own output. Sources are listed explicitly instead, relative
+   to this file. */
+@import "tailwindcss" source(none);
+@source "../../templates/**/*.html";
+@source "../js/**/*.js";
 
 /* The palette, in one place.
 
@@ -43,11 +50,11 @@
                transition-colors hover:bg-accent;
     }
 
-    /* w-full: a bare <select> sizes itself to its widest <option>, and
-       some genre names are long enough to push the page wider than a phone. 
-       w-full sets the boundary as replaces that content-based sizing with "as wide as the
-       parent", so a long option is truncated
-    */
+    /* w-full: a bare <select> sizes itself to its widest <option>, and some
+       genre names are long enough to push the page wider than a phone.
+       width:100% replaces that content-based sizing with "as wide as the
+       parent", so a long option is truncated inside the control rather than
+       stretching it. */
     .field {
         @apply rounded-lg w-full border border-line bg-panel px-3 py-2.5 text-sm text-ink
                focus:outline-2 focus:outline-offset-2 focus:outline-accent;
