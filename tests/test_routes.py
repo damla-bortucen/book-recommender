@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.recommender import RESULTS_TOP_K
+from app.recommender import RESULTS_TOP_K, POPULARITY_PRESETS
 
 
 @pytest.fixture(scope="module")     # creates the client once for the whole file to use
@@ -27,6 +27,17 @@ def a_book_id(client):
     match = re.search(r'data-id="(\d+)"', response.text)
     assert match, "typeahead returned nothing to test with"
     return int(match.group(1))
+
+
+@pytest.mark.parametrize("preset", POPULARITY_PRESETS)
+def test_every_popularity_preset_works(client, preset):
+    response = client.post(
+        "/search",
+        data={"query": "a book about the sea", "genre": "All", "mood": "All",
+              "popularity": preset},
+    )
+    assert response.status_code == 200
+    assert response.text.count("<article") == RESULTS_TOP_K
 
 
 def test_home_renders(client):
@@ -88,3 +99,42 @@ def test_apostrophe_style_does_not_matter(client):
 
     assert straight_ids, "no results for a straight apostrophe"
     assert straight_ids == curly_ids
+
+
+def test_unknown_popularity_falls_back(client):
+    """
+    The radio group constrains the browser, not the request — anything can be
+    posted, so an unrecognised value must fall back rather than 500.
+    """
+
+    response = client.post(
+        "/search",
+        data={"query": "a book about the sea", "genre": "All", "mood": "All",
+              "popularity": "nonsense"},
+    )
+    assert response.status_code == 200
+    assert response.text.count("<article") == RESULTS_TOP_K
+
+
+def test_popularity_preset_changes_the_results(client):
+    """
+    The weight has to reach the engine. Checked across several queries because
+    any single one might rank the same either way as the catalogue shifts.
+    """
+
+    queries = [
+        "short stories about leaving home for another country",
+        "slow atmospheric horror",
+        "science writing about the ocean",
+    ]
+
+    def ids(query, preset):
+        response = client.post(
+            "/search",
+            data={"query": query, "genre": "All", "mood": "All", "popularity": preset},
+        )
+        return re.findall(r'/book/(\d+)', response.text)
+
+    differed = [q for q in queries if ids(q, "gems") != ids(q, "popular")]
+    assert differed, "gems and popular returned identical results for every query"
+
