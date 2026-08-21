@@ -211,6 +211,26 @@ doesn't fix the 12 already stored so those were deleted with a one-off DELETE.
 0 for page number is used as a placeholder for unknown rather than an actual value. 
 So replace with None.
 
+### Tags should scale with how much interaction a row has
+
+Hardcover's tags are user-applied, and one person's mistake cannot be filtered out. 
+
+The obvious fix is raising `MIN_TAG_COUNT` to 2 or 3 but that destroys the catalogue. Percentage of
+books keeping *any* genre tag reduces by a lot. For a book with 20 readers one person's tag plays a big role.
+
+So the threshold is relative to the book's own most-applied tag:
+
+```python
+top = max(i["count"] for i in items)
+floor = max(MIN_TAG_COUNT, math.ceil(top * MIN_TAG_RATIO))   # ratio 0.2
+```
+
+A book whose tags are all `count=1` has `max=1`, so its floor is 1 and **nothing is
+removed**. A well-tagged book loses its tail.
+
+When rows carry different amounts of evidence, a constant threshold silently punishes the sparse ones. 
+Scale it to what each row actually has.
+
 ---
 
 ## 6. SQL patterns
