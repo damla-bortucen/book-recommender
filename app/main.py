@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from app.recommender import BookRecommender
 from app.recommender import BookRecommender, POPULARITY_PRESETS, POPULARITY_WEIGHT
 
 app = FastAPI() # the application object
