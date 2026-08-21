@@ -18,6 +18,13 @@ RESULTS_TOP_K = 8
 POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
 CANDIDATE_POOL = 200
 
+# The user picks one of these instead of a raw number.
+POPULARITY_PRESETS = {
+    "gems": 0.0,
+    "balanced": 0.02,
+    "popular": 0.05,
+}
+
 
 BLOCKED_TAGS = [
     # too broad

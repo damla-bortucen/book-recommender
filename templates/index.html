@@ -35,24 +35,40 @@
         <!--Tab 1-->
         <div id="panel-search">
             <form hx-post="/search" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML"
-                class="flex flex-wrap items-center gap-3">
-                <input type="text" name="query" placeholder="Describe a book you'd like..."
-                    class="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-3 py-2 
-                    focus:outline-none focus:ring-2 focus:ring-sky-500">
+                class="space-y-3">
 
-                <select name="genre" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                    {% for g in genres %}
-                    <option value="{{ g }}">{{ g }}</option>
+                <div class="flex flex-wrap items-center gap-3">
+                    <input type="text" name="query" placeholder="Describe a book you'd like..."
+                        class="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-3 py-2
+                        focus:outline-none focus:ring-2 focus:ring-sky-500">
+
+                    <select name="genre" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        {% for g in genres %}
+                        <option value="{{ g }}">{{ g }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select name="mood" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        {% for m in moods %}
+                        <option value="{{ m }}">{{ m }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Search</button>
+                </div>
+
+                {% set labels = {"gems": "Hidden gems", "balanced": "Balanced", "popular": "Well-known"} %}
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <span class="text-slate-500">Show me:</span>
+                    {% for value in popularity_presets %}
+                    <label class="inline-flex cursor-pointer items-center gap-2">
+                        <input type="radio" name="popularity" value="{{ value }}"
+                            {% if value == popularity_default %}checked{% endif %}
+                            class="accent-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <span class="text-slate-700">{{ labels.get(value, value) }}</span>
+                    </label>
                     {% endfor %}
-                </select>
-
-                <select name="mood" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                    {% for m in moods %}
-                    <option value="{{ m }}">{{ m }}</option>
-                    {% endfor %}
-                </select>
-
-                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Search</button>
+                </div>
             </form>
         </div>
 

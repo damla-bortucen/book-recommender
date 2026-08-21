@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from app.recommender import BookRecommender
+from app.recommender import BookRecommender, POPULARITY_PRESETS, POPULARITY_WEIGHT
 
 app = FastAPI() # the application object
 # tell FastAPI where the template files live
@@ -23,6 +24,8 @@ def home(request: Request):
             "book_count": recommender.book_count,
             "genres": ["All"] + recommender.genres,
             "moods": ["All"] + recommender.moods,
+            "popularity_presets": list(POPULARITY_PRESETS),
+            "popularity_default": "balanced"
         },
     )
 
@@ -34,8 +37,10 @@ def search(
     query: str = Form(...),
     genre: str = Form("All"),
     mood: str = Form("All"),
+    popularity: str = Form("balanced"),
 ): 
-    results = recommender.recommend_from_query(query, genre=genre, mood=mood)
+    weight = POPULARITY_PRESETS.get(popularity, POPULARITY_WEIGHT)      # rejects anything not on dict (fallback)
+    results = recommender.recommend_from_query(query, genre=genre, mood=mood, weight=weight)
     return templates.TemplateResponse(
         request,
         "_results.html",
