@@ -8,7 +8,7 @@ you already love and get recommendations from the average of their vectors.
 Built on the [Hardcover](https://hardcover.app) catalogue, stored in **Postgres +
 pgvector**, served by **FastAPI + HTMX**.
 
-**[Live demo →](https://book-recommender-jaz2.onrender.com/)**
+**[Live demo →](https://bookmarked-qktw.onrender.com)**
 *Hosted on Render's free tier, so the first request after a quiet spe ll takes a minute to wake.*
 
 Or run it locally:
