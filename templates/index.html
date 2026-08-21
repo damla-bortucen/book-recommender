@@ -13,56 +13,62 @@
 
     {% include "components/header.html" %}
 
-    <main class="mx-auto w-full max-w-6xl flex-1 px-8 py-12">
+    <main class="mx-auto w-full max-w-6xl flex-1 px-8 py-8">
 
-         <!-- TAB BAR -->
-        <div class="flex gap-2 border-b border-slate-200">
-            <button type="button" data-tab="search"
-                    class="tab-btn px-4 py-2 font-medium border-b-2 border-sky-600 text-sky-600">
+        <!-- TAB BAR -->
+        <nav class="flex gap-6 border-b border-line" aria-label="Discovery modes">
+            <button type="button" data-tab="search" aria-controls="panel-search" aria-selected="true"
+                    class="tab-btn is-active">
                 Search by description
             </button>
-            <button type="button" data-tab="books"
-                    class="tab-btn px-4 py-2 font-medium border-b-2 border-transparent text-slate-500">
+            <button type="button" data-tab="books" aria-controls="panel-books" aria-selected="false"
+                    class="tab-btn">
                 Find by books
             </button>
-        </div>
+        </nav>
 
         <!--Tab 1-->
-        <div id="panel-search">
-            <form hx-post="/search" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML"
-                class="space-y-3">
+        <div id="panel-search" class="pt-5">
+            <form hx-post="/search" hx-indicator="#loading" hx-target="#results" hx-swap="innerHTML">
 
-                <div class="flex flex-wrap items-center gap-3">
-                    <input type="text" name="query" placeholder="Describe a book you'd like..."
-                        class="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-3 py-2
-                        focus:outline-none focus:ring-2 focus:ring-sky-500">
+                <label class="sr-only" for="query">Describe a book you would like</label>
+                <input type="text" id="query" name="query" placeholder="Describe a book you'd like…"
+                    class="w-full border-0 border-b-2 border-line bg-transparent py-3 font-display text-2xl
+                           placeholder:text-muted/60 focus:border-accent focus:outline-none sm:text-2xl">
 
-                    <select name="genre" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        {% for g in genres %}
-                        <option value="{{ g }}">{{ g }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <select name="mood" class="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        {% for m in moods %}
-                        <option value="{{ m }}">{{ m }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">Search</button>
-                </div>
-
-                {% set labels = {"gems": "Hidden gems", "balanced": "Balanced", "popular": "Well-known"} %}
-                <div class="flex flex-wrap items-center gap-4 text-sm">
-                    <span class="text-slate-500">Show me:</span>
-                    {% for value in popularity_presets %}
-                    <label class="inline-flex cursor-pointer items-center gap-2">
-                        <input type="radio" name="popularity" value="{{ value }}"
-                            {% if value == popularity_default %}checked{% endif %}
-                            class="accent-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        <span class="text-slate-700">{{ labels.get(value, value) }}</span>
+                <div class="mt-5 flex flex-col items-stretch gap-8 sm:flex-row sm:items-end">
+                    <label class="grid min-w-0 flex-1 gap-2">
+                        <span class="label text-accent">Genre</span>
+                        <select name="genre" class="field">
+                            {% for g in genres %}
+                            <option value="{{ g }}">{{ g }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
-                    {% endfor %}
+
+                    <label class="grid min-w-0 flex-1 gap-2">
+                        <span class="label text-accent">Mood</span>
+                        <select name="mood" class="field">
+                            {% for m in moods %}
+                            <option value="{{ m }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    {% set labels = {"gems": "Hidden gems", "balanced": "Balanced", "popular": "Well-known"} %}
+                    <fieldset class="min-w-0 flex-1 border-0 p-0">
+                        <legend class="label mb-2 text-accent">Show me</legend>
+                        {% for value in popularity_presets %}
+                        <label class="flex cursor-pointer items-center gap-2 text-sm text-muted">
+                            <input type="radio" name="popularity" value="{{ value }}"
+                                {% if value ==comm popularity_default %}checked{% endif %}
+                                class="accent-accent">
+                            {{ labels.get(value, value) }}
+                        </label>
+                        {% endfor %}
+                    </fieldset>
+
+                    <button type="submit" class="btn">Search</button>
                 </div>
             </form>
         </div>

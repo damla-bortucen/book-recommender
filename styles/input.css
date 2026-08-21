@@ -18,3 +18,37 @@
 
     --font-display: Georgia, serif;    /* headings; gives font-display */
 }
+
+/* Classes that JavaScript toggles. These exist so app.js can say which tab is
+   active without knowing that active means an accent underline.  
+*/
+@layer components {
+    .tab-btn {
+        @apply cursor-pointer border-b-2 border-transparent pb-3 text-sm
+               text-muted transition-colors hover:text-ink;
+    }
+
+    .tab-btn.is-active {
+        @apply border-accent text-ink;
+    }
+
+    /* Small uppercase text: the header eyebrow and book count today, form
+       labels and legends later. Colour stays inline — it varies per use. */
+    .label {
+        @apply text-[11px] uppercase tracking-[0.16em];
+    }
+
+    .btn {
+        @apply rounded-lg cursor-pointer bg-ink px-6 py-3 font-bold text-paper
+               transition-colors hover:bg-accent;
+    }
+
+    /* w-full: a bare <select> sizes itself to its widest <option>, and
+       some genre names are long enough to push the page wider than a phone. 
+       w-full sets the boundary as ...
+    */
+    .field {
+        @apply rounded-lg w-full border border-line bg-panel px-3 py-2.5 text-sm text-ink
+               focus:outline-2 focus:outline-offset-2 focus:outline-accent;
+    }
+}

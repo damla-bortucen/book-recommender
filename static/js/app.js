@@ -65,10 +65,8 @@ tabButtons.forEach(function (btn) {
 
         tabButtons.forEach(function (b) {
             const active = b.dataset.tab === target;
-            b.classList.toggle('border-sky-600', active);
-            b.classList.toggle('text-sky-600', active);
-            b.classList.toggle('border-transparent', !active);
-            b.classList.toggle('text-slate-500', !active);
+            b.classList.toggle('is-active', active);      // CSS decides what active looks like
+            b.setAttribute('aria-selected', active);
         });
     });
 });
