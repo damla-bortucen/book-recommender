@@ -184,6 +184,33 @@ END
 
 Use `IS DISTINCT FROM` instead of `<>` because it handles `NULL` values predictably.
 
+## 6. Validation
+
+Most outliers in this catalogue are real:
+
+| Looks wrong | Actually |
+| --- | --- |
+| `release_year = -2100` | Gilgamesh. Negative years are BCE. |
+| `release_year = 2030` | *The Doors of Stone* — announced, unpublished |
+| `pages = 18831` | *The Complete Wheel of Time* — an omnibus |
+| `pages = 0` | genuinely impossible: a placeholder for missing |
+
+A range check written from intuition would have deleted Gilgamesh and kept the zeroes.
+
+Some fields can't be validated at all. `release_year` values between 1 and 100 are mostly
+wrong (Charlotte's Web is stored as `2`), but `Letters from a Stoic` at `64` is correct —
+Seneca wrote it around 65 AD. Nothing in the row distinguishes them.
+
+### Filter future release dates
+
+Exclude unreleased books from the GraphQL. This stop future incorrect ingests but 
+doesn't fix the 12 already stored so those were deleted with a one-off DELETE.
+
+### Filter 0 pages
+
+0 for page number is used as a placeholder for unknown rather than an actual value. 
+So replace with None.
+
 ---
 
 ## 6. SQL patterns
