@@ -184,16 +184,37 @@ python -m data_ingest.embeddings    # batches of 200; safe to interrupt and resu
 psql "$DATABASE_URL" -f db/indexes.sql
 ```
 
-**6. Run it**
+**6. Build the stylesheet**
+
+`static/css/tailwind.css` is generated and **not committed**, so a fresh clone has no
+CSS until you build it. Render runs the same build at deploy time.
+
+The standalone CLI is gitignored too — grab **v4.3.1**, matching the version pinned in
+`render.yaml`:
+
+```bash
+curl -sSLo tailwindcss \
+  https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.1/tailwindcss-macos-arm64
+chmod +x tailwindcss
+./tailwindcss -i static/css/input.css -o static/css/tailwind.css
+```
+
+**7. Run it**
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-To get UI watcher running when making changes:
+While editing templates, leave the watcher running in a second terminal. Tailwind only
+emits the classes it finds when it runs, so a class you just typed does nothing until a
+rebuild:
+
 ```bash
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 ```
+
+Stop the watcher before switching branches or pulling — it reads git's rewrites as edits
+and rebuilds against whatever lands on disk.
 
 ---
 
@@ -226,7 +247,7 @@ templates/
   _macros.html       cover() and meta(), shared by the card and the modal
 static/
   css/input.css      Tailwind source: @theme tokens + component layer
-  css/tailwind.css   generated
+  css/tailwind.css   generated, gitignored — build it (step 6)
   js/app.js          picker chips, tab switching, modal close
   img/cover_NA.png   fallback cover
 NOTES.md           working notes on storage, pgvector, indexing, API behaviour
