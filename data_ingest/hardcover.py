@@ -9,6 +9,7 @@ import time
 import httpx
 import psycopg
 from dotenv import load_dotenv
+from datetime import date
 
 load_dotenv()
 
@@ -25,7 +26,16 @@ query Books($limit: Int!, $offset: Int!, $minUsers: Int!) {
   books(
     limit: $limit
     offset: $offset
-    where: {users_count: {_gte: $minUsers}, description: {_is_null: false}}
+    where: {
+        users_count: {_gte: $minUsers}, 
+        description: {_is_null: false}}
+        # skip unreleased books — a recommendation you can't go and read is noise.
+        # release_date beats release_year: it also catches titles due later this year.
+        _or: [
+            {release_date: {_lte: $today}}
+            {release_date: {_is_null: true}}
+        ]
+    }
     order_by: [{users_count: desc}, {id: asc}]
   ) {
     id slug title description
@@ -70,11 +80,19 @@ ON CONFLICT (hardcover_id) DO UPDATE SET
 """
 
 
+def positive(value: int | None) -> int | None:
+    """
+    None for missing-value placeholders — 0 pages means unknown, not zero.
+    """
+
+    return value if value and value > 0 else None
+
+
 def fetch(limit: int, offset: int = 0) -> list[dict]:
     response = httpx.post(
         API_URL,
         json={"query": QUERY, 
-              "variables": {"limit": limit, "offset": offset, "minUsers": MIN_USERS},
+              "variables": {"limit": limit, "offset": offset, "minUsers": MIN_USERS, "today": date.today().isoformat()},
         },
         headers={"Authorization": TOKEN},
         timeout=60.0,
@@ -111,7 +129,7 @@ def to_row(book: dict) -> tuple:
     return (
         book["id"], book.get("slug"), book["title"],
         authors, book["description"], image.get("url"), edition.get("isbn_13"),
-        book.get("release_year"), book.get("pages"), book.get("rating"),
+        book.get("release_year"), positive(book.get("pages")), book.get("rating"),
         book.get("ratings_count"), book["users_count"],
         tags(cached, "Genre"), tags(cached, "Mood"), tags(cached, "Content Warning"),
     )
