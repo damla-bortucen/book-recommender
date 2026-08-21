@@ -18,6 +18,18 @@ RESULTS_TOP_K = 8
 POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
 CANDIDATE_POOL = 200
 
+
+BLOCKED_TAGS = [
+    # too broad
+    "general", "literature",
+    # duplicates
+    "young adult fiction", "juvenile fiction",
+    "comics & graphic novels", "graphic novels", "biography & autobiography",
+    # themes that overlap genres already offered
+    "space", "aliens", "murder", "magic", "friendship",
+]
+
+
 client = OpenAI()
 
 
@@ -76,7 +88,7 @@ class BookRecommender:
 
         sql = TOP_TAGS.format(column=column)   # our own literal, never user input
         with pool.connection() as conn:
-            rows = conn.execute(sql, (limit,)).fetchall()
+            rows = conn.execute(sql, {"blocked": BLOCKED_TAGS, "limit": limit}).fetchall()
         return [row[0] for row in rows]
 
 

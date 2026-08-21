@@ -2,9 +2,19 @@ BOOK_COUNT = "SELECT count(*) FROM books"
 
 
 TOP_TAGS = """
-SELECT tag FROM books, unnest({column}) AS tag
-GROUP BY tag ORDER BY count(*) DESC LIMIT %s
+SELECT (array_agg(tag ORDER BY n DESC))[1] AS label
+FROM (
+    SELECT tag, count(*) AS n
+    FROM books, unnest({column}) AS tag
+    GROUP BY tag
+) t
+WHERE lower(tag) <> ALL(%(blocked)s)
+GROUP BY lower(tag)
+ORDER BY sum(n) DESC
+LIMIT %(limit)s
 """
+# groups case variants together, then labels the group with its commonest
+# spelling — "Science Fiction" (11,249) rather than "Science fiction" (2,455)
 
 
 SEARCH = """
@@ -15,8 +25,10 @@ WITH candidates AS (
            genres, moods,
            1 - (embedding <=> %(vec)s::vector) AS similarity
     FROM books
-    WHERE (%(genre)s::text IS NULL OR genres @> ARRAY[%(genre)s]::text[])
-      AND (%(mood)s::text  IS NULL OR moods  @> ARRAY[%(mood)s]::text[])
+    WHERE (%(genre)s::text IS NULL OR EXISTS (
+        SELECT 1 FROM unnest(genres) g WHERE lower(g) = lower(%(genre)s)))
+    AND (%(mood)s::text IS NULL OR EXISTS (
+        SELECT 1 FROM unnest(moods) m WHERE lower(m) = lower(%(mood)s)))
     ORDER BY embedding <=> %(vec)s::vector
     LIMIT %(pool)s
 )
