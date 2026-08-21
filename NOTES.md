@@ -1,30 +1,28 @@
 # Notes
 
-## Storage 
+## 1. Storage 
 
-#### Negatives of the old CSV + Chroma design
+### Old design: CSV + Chroma
 
-The old shape: massive CSV of book rows and a Chroma folder of vectors, both loaded
-into memory when the app starts. Essentially storing the same thing twice. 
-Issues:
-- Adding a single book means regenerating both artifacts. Making updated, current data difficult to maintain.
-- Every row loads at startup even if not necessary
+The old system stored book data in a large CSV and vectors in Chroma, then loaded both into memory at startup. This duplicated related data and caused two problems:
 
-#### Solution: Postgres with `pgvector`
+- Adding one book required regenerating both artifacts.
+- Every row loaded at startup, whether needed or not.
+
+### New design: PostgreSQL + `pgvector`
 
 Collapses both into one table. A book row and its vector are the same row.
 
 ---
 
-## pgvector
+## 2. `pgvector`
 
 `CREATE EXTENSION vector;` adds a `vector` column type plus distance operators.
 
 ```sql
 embedding VECTOR(512)
 ```
-The number is the dimension (how many floats per vector) and it must match whatever the
-embedding model outputs. 
+`512` is the embedding dimension and must match the model's output.
 
 Distance operators:
 
@@ -34,7 +32,7 @@ Distance operators:
 | `<->` | L2 / Euclidean |
 | `<#>` | negative inner product |
 
-Cosine distance runs 0 (identical) → 2 (opposite), so **similarity = `1 - (a <=> b)`**.
+Cosine distance runs 0 (identical) to 2 (opposite), so **similarity = `1 - (a <=> b)`**.
 
 OpenAI's vectors are unit-normalised, which means cosine and L2 rank results identically.
 The old Chroma store used L2. 
@@ -46,10 +44,9 @@ out, so ranking is unaffected.
 
 ---
 
-## Indexes
+## 3. Indexes
 
-Without an index the database reads every row — a **Seq Scan**. Finding the 8 nearest
-vectors to a book means computing distance against all 60,299 rows.
+Without an index, PostgreSQL performs a **sequential scan** and compares the query with all rows.
 
 An index is a structure built in advance so the database can jump to matching rows
 instead of touching them all.
@@ -64,7 +61,7 @@ instead of touching them all.
 
 A B-tree can't answer the vector question at all.
 
-#### Build indexes *after* bulk loading
+### Build indexes after bulk loading
 
 An index is updated on every insert. Loading 60,000 rows into a table with four indexes
 means 240,000 incremental index updates; building once at the end is one build.
@@ -72,13 +69,11 @@ means 240,000 incremental index updates; building once at the end is one build.
 Also: an index **never changes what a query returns**, only how fast. Always safe to
 defer — nothing is broken while they're missing.
 
-**One index can't be deferred: the primary key.** `ON CONFLICT (hardcover_id)` needs a
-unique index on that column to detect the conflict, and `PRIMARY KEY` is what creates it.
-So the rule is "defer the indexes that only serve *reads*" — anything a write depends on
-has to exist during the load. (`books_users_count_idx` is in `schema.sql` rather than
-`indexes.sql`; it's a read index, so it could move to `indexes.sql` too.)
+**Rule:** keep indexes required by writes; defer indexes used only by reads. 
+`ON CONFLICT (hardcover_id)` needs a unique index on that column to detect the conflict, 
+and `PRIMARY KEY` is what creates it: Anything a write depends on has to exist during the load. 
 
-#### An index is an option, not a guarantee
+### An index is an option, not a guarantee
 
 With a GIN index on `genres`, this still choses a Seq Scan:
 
@@ -88,7 +83,7 @@ SELECT title FROM books WHERE genres @> ARRAY['Dystopian'] LIMIT 10;
 
 4,629 of 60,299 books are Dystopian and only 10 were wanted, so reading rows until 10 matched beat consulting the index. The planner weighs cost and decides.
 
-#### HNSW only works on a *constant* query vector
+### HNSW only works on a constant query vector
 
 HNSW navigates a graph toward one fixed point, so the target has to be
 a constant. A vector coming from a joined row could differ per row, so the planner can't
@@ -98,83 +93,59 @@ So embed the query in Python and pass the vector as a parameter.
 For "books like these picks", fetch their vectors, average them **in Python**,
 then pass the result (two fast round trips rather than one slow join).
 
-#### Other HNSW details
+### HNSW configuration
 
-- **`vector_cosine_ops` must match the operator queried with** (`<=>`). Build for cosine
-  then query with `<->` and the index is silently ignored.
-- **HNSW is approximate.** It may not return the same rows as a full scan — it trades
-  recall for speed. How *much* recall is set by `ef_search`, and the loss is not always
-  small: see below.
+The index operator class must match the query operator. An index built with `vector_cosine_ops` is used with `<=>`; querying with `<->` can cause the index to be ignored.
 
-#### why `iterative_scan` is set
+HNSW is approximate: it trades some recall for speed. Recall is mainly controlled by `ef_search`.
 
 ```sql
 SET hnsw.iterative_scan = relaxed_order;  -- keep walking until LIMIT is filled
 SET hnsw.ef_search = 400;                 -- candidates held while walking
 ```
 
-`relaxed_order` allows results to come back not perfectly distance-ordered, which is fine
-here because stage 2 re-ranks them anyway. `strict_order` preserves ordering but is slower.
+- `relaxed_order` keeps searching until enough rows satisfy `LIMIT`, without guaranteeing perfect distance order. This is acceptable because stage 2 re-ranks the results.
+- Stage 1 retrieves 200 candidates; stage 2 filters and re-ranks them to 8 recommendations.
 
-This is also why the query pulls a pool of 200 and re-ranks down to 8: a wide first stage
-leaves enough survivors for the filter and the popularity weighting to work with.
 
-#### `ef_search` has a floor, and below it the index is silently wrong
+### Choosing `ef_search`
 
-Searching HNSW is a **walk**, not a lookup. Start at a node, move to whichever neighbour
-is closer to the query, repeat. Pure greedy walking gets stuck, so the algorithm keeps a
-**shortlist of the best candidates so far** and keeps exploring outward from all of them.
-`ef_search` is the length of that shortlist.
+HNSW walks through neighboring vectors while retaining a shortlist of promising candidates. If the shortlist is too small, useful paths may be discarded before their best neighbors are explored.
 
-When the shortlist is full, the worst entry is evicted — **and an evicted node's
-neighbours are never explored.** If a mediocre node was the only bridge to an excellent
-match, that match becomes unreachable. Not ranked low. Never seen.
+For this setup:
 
-So it isn't only "speed vs recall". It's a **hard floor**:
-
-```
-stage 1 asks the index for   CANDIDATE_POOL = 200 rows
-the walk may hold at most    ef_search
+```text
+CANDIDATE_POOL = 200
+ef_search      = 400
 ```
 
-`ef_search < CANDIDATE_POOL` cannot be correct — it's returning 200 rows from a process
-that never holds 200. **Rule: `ef_search >= CANDIDATE_POOL`, and roughly double is a sane
-default. Raising `CANDIDATE_POOL` means raising this too.**
+Keep `ef_search >= CANDIDATE_POOL`; roughly double is a sensible starting point. Raise both together if the candidate pool increases.
 
-Measured on the 45 evaluation cases (`evaluation/`), the corpus at ~61k books:
+Results from 45 evaluation cases on about 61,000 books:
 
-| `ef_search` | hit@8 | MRR | median |
-| --- | --- | --- | --- |
-| 100 | 34/45 | 0.693 | 123.7 ms |
-| 200 | 34/45 | 0.693 | 123.0 ms |
-| **400** | **37/45** | **0.759** | 129.2 ms |
-| 800 | 37/45 | 0.759 | 133.0 ms |
+| `ef_search` | Hit@8 | MRR |
+| ---: | ---: | ---: |
+| 100 | 34/45 | 0.693 |
+| 200 | 34/45 | 0.693 |
+| **400** | **37/45** | **0.759** |
+| 800 | 37/45 | 0.759 |
 
-At 100, *The Metamorphosis* — true rank **3** for "a man wakes as an insect and his family
-slowly turns against him" — was absent from the top **200** entirely. 200 doesn't help
-either: exactly enough slots leaves no slack to explore. 800 finds nothing 400 missed, so
-400 is the knee. Recall climbs then flattens while cost keeps rising; tune to the knee.
-
-(Those timings are laptop → Neon in us-east-1, so mostly network. The ~5 ms *difference*
-is the real index cost.)
+At 100, *The Metamorphosis*—the true third-ranked result for “a man wakes as an insect and his family slowly turns against him”—was absent from the top 200 candidates. A setting of 800 found nothing that 400 missed, making **400 the best trade-off** in this test.
 
 ---
 
-## Connections and the pool
+## 4. Connections and pooling
 
-A connection is not a cheap handle: it's a TCP socket, a TLS handshake, authentication,
-and a backend process on the server. Paying that per request would dominate the
-cost of a query that takes 45 ms.
+Opening a connection requires a TCP socket, TLS handshake, authentication, and a server process. Repeating 
+that work for every request could cost more than the query itself.
 
 ```python
 pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=4, configure=_configure, open=True)
 ```
 
-Open a few at startup, keep them alive, hand one out per request and take it back.
-`max_size` is a ceiling on concurrent database work, not a target — Postgres runs a process
-per connection, so more is not better.
+The pool opens a few connections at startup and reuses them. `max_size` limits concurrent database work; it is a ceiling, not a target.
 
-#### `configure` runs per connection, not per query
+#### Configure runs per connection, not per query
 
 ```python
 def _configure(conn):
@@ -182,21 +153,16 @@ def _configure(conn):
     conn.execute("SET hnsw.iterative_scan = relaxed_order")
 ```
 
-Two things here are **per-connection state**, which is exactly why they belong in the hook:
+Both settings are connection-specific:
 
-- `SET` applies to the session. A connection that skipped the hook would quietly use
-  default HNSW behaviour, so identical requests would perform differently depending on
-  which connection they landed on.
-- `register_vector` teaches *that* connection's psycopg how to send a Python list as a
-  `vector` and how to read one back. Type adapters are registered per connection, not
-  globally.
+- `SET` changes the database session. Skipping it would make performance depend on which pooled connection handled the request.
+- `register_vector` teaches that connection's psycopg adapter how to send and receive vector values.
 
-Because of the adapter, a vector comes back as a `Vector` object rather than a list — hence
-`row[0].to_list()` before averaging the picks.
+Because the adapter returns a `Vector` object, use `row[0].to_list()` before averaging selected vectors.
 
 ---
 
-## Upserts
+## 5. Upserts
 
 ```sql
 INSERT INTO books (...) VALUES (...)
@@ -207,10 +173,7 @@ Insert if new, update if the key already exists. This is what makes the ingest s
 re-runnable — run it twice and you get the same 60k books, not 120k. `EXCLUDED` refers to
 the row that *would* have been inserted.
 
-#### Letting the data track its own staleness
-
-A stored vector is only valid for the description it was made from, so the upsert throws
-it away when that description changes:
+A vector is valid only for the description from which it was generated. If that description changes, clear the old vector:
 
 ```sql
 embedding = CASE
@@ -219,49 +182,104 @@ embedding = CASE
 END
 ```
 
-`IS DISTINCT FROM`, not `<>` because `NULL <> NULL` evaluates to `NULL`, not `TRUE` 
+Use `IS DISTINCT FROM` instead of `<>` because it handles `NULL` values predictably.
 
 ---
 
-## Query-writing patterns
+## 6. SQL patterns
 
-#### Values can be parameters; identifiers cannot
+### Values can be parameters; identifiers cannot
 
-`TOP_TAGS` is the one query built with `.format()`, because a **column name** can't be a
-bind parameter — placeholders stand in for values only:
+Bind parameters represent values, not column names. `TOP_TAGS` therefore uses `.format()` for its validated column identifier:
 
 ```python
 sql = TOP_TAGS.format(column=column)
 ```
 
-#### `unnest` to count array values
-
-Tags are stored as arrays, so counting how often each one appears means expanding the
-array into rows first:
+### Count array values with `unnest`
 
 ```sql
-SELECT tag FROM books, unnest(genres) AS tag GROUP BY tag ORDER BY count(*) DESC LIMIT 20
+SELECT tag
+FROM books, unnest(genres) AS tag
+GROUP BY tag
+ORDER BY count(*) DESC
+LIMIT 20;
 ```
 
-One row per (book, tag) pair, then an ordinary `GROUP BY`.
+`unnest` creates one row per `(book, tag)` pair, after which a normal `GROUP BY` can count the tags.
 
 ---
 
-## Weighting recommendations by popularity
+## 7. Popularity-weighted recommendations
 
 ```sql
 ORDER BY (1 - (embedding <=> %(q)s)) + %(w)s * ln(1 + users_count) DESC
 ```
 
-Semantic similarity plus log-scaled popularity. `w = 0` is pure meaning-matching; raising
-it pulls better-known books up.
+This combines semantic similarity with log-scaled popularity:
 
-`ln()` matters: reader counts can be massive, so raw counts would completely swamp the
-similarity term. The log compresses that range so popularity nudges rather than dominates.
+- `w = 0` gives pure semantic matching.
+- Increasing `w` favors more widely read books.
+- `ln(1 + users_count)` compresses large reader counts so popularity nudges rather than dominates the ranking.
+
+### Choosing the weight
+
+The two evaluation tiers measure different goals and favor different weights:
+
+| `w` | Tier 1 Hit@8: findability | Tier 2 Precision@8: quality |
+| ---: | ---: | ---: |
+| 0.00 | 22/45 | **0.551** |
+| 0.02 | 36/45 | 0.517 |
+| **0.05 (shipped)** | **37/45** | 0.500 |
+
+- **Find a half-remembered book:** the target is often famous, so popularity nearly doubles Tier 1 performance from `w = 0` to `w = 0.05`.
+- **Recommend something niche:** popularity pushes obscure but relevant books down, so Tier 2 quality falls as `w` rises.
+
+Tier 1 is biased toward fame because its cases were written from memory. The median target book is in the **99.9th percentile** by reader count, so this tier overstates the general value of popularity.
+
+**Conclusion:** one global weight handles two different jobs imperfectly. Exposing the popularity weight in the UI is more useful than further tuning a single constant.
 
 ---
 
-## API issues to remember
+## 8. Rejected: embedding genres and moods
+
+**Decision: do not ship. The extra embedding produced no overall improvement.**
+
+The original text embedded `title`, `authors`, and `description`, but not genre or mood tags. A second `embedding_v2` column added those tags so both approaches could be tested on identical queries.
+
+| Embedding | Tier 1 | Tier 2 at `w = 0.05` |
+| --- | ---: | ---: |
+| Description only | **37/45** | 0.500 |
+| Description + tags | 36/45 | 0.500 |
+
+`embedding_v2` had an advantage: it used exact sequential scans because its HNSW index had not been built, while the original embedding used approximate search. It still did not improve the scores.
+
+### What the experiment revealed
+
+The tags were not useless. At `w = 0`, v2 surfaced short-story collections such as *Astray*, *Awayland*, and *Come On In*, which v1 missed. Stage 2 then removed them because the popularity term favored books such as *Migrations*.
+
+In other words, **the tags worked, but popularity weighting cancelled their benefit.**
+
+Two reasons not to ship v2:
+
+- **Tag coverage is sparse:** only 529 of 61,052 books—0.9%—have the `Short stories` tag.
+- **Filters are stronger:** `genres @> ARRAY[...]` guarantees a constraint, while embedding a tag only nudges similarity.
+
+### Better improvement: clean the genre dropdown
+
+The top-20 genre list contains duplicated or unhelpful values:
+
+- `Science Fiction` and `Science fiction` differ only by capitalization.
+- `Fiction` covers 56% of the corpus and barely filters anything.
+- `General` is not meaningful.
+- `Young Adult`/`Young Adult Fiction` and several comics/graphic-novel variants overlap.
+- Roughly 6 of 20 slots are wasted, while `Horror`—1,058 books and rank 32—is missing.
+
+Normalizing capitalization, merging duplicates, and blocking low-value labels should improve the interface more than re-embedding the catalogue.
+
+---
+
+## 9. API issues to remember
 
 **A 200 doesn't mean success.**
 Open Library returns `200 OK` with a 43-byte blank image for covers it doesn't have. The
@@ -283,26 +301,20 @@ a second one gives "Unable to verify token", which reads like an expired token.
 
 ---
 
-## Keeping the catalogue fresh
+## 10. Keeping the catalogue fresh
 
-The catalogue goes stale, so a scheduled GitHub Action re-runs the pipeline weekly to re-ingest books and update embeddings.
+A scheduled GitHub Action reruns the ETL pipeline weekly to re-ingest books and update embeddings. It is a scheduled data job—not a test or deployment workflow.
 
 This workflow runs on a clock, tests nothing and deploys nothing. GitHub Actions is a
 general-purpose event runner for this **scheduled ETL job**.
 
-#### Actions vs. cron
+### Actions vs. cron
 
-The first row decided it. On macOS plain `cron` doesn't fire at all if the machine is
-asleep at that moment (`launchd` with `StartCalendarInterval` does catch up on wake) — so a
-weekly laptop job realistically runs about half the time.
-
-Remember about the scheduler:
-- **Scheduled workflows are disabled after 60 days of repo inactivity.** It emails you and
-  then silently stops.
+GitHub Actions is more reliable than macOS `cron` here because ordinary cron jobs do not run if the laptop is asleep at the scheduled time. One caveat: **GitHub disables scheduled workflows after 60 days of repository inactivity.**
 
 ---
 
-## Embeddings
+## 11. Embeddings
 
 - Default in LangChain is `text-embedding-ada-002` — the *legacy* model. Naming a model
   explicitly is worth it: `text-embedding-3-small` is 5× cheaper and scores better.
