@@ -1,8 +1,8 @@
-<header class="flex flex-col justify-between gap-4 border-b border-line pb-8 sm:flex-row sm:items-end sm:gap-8">
-    <div>
-        <p class="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-accent">Find your next read, tailored exactly to your preferences</p>
-        <h1 class="font-display text-6xl leading-none tracking-tighter">{{ title }}</h1>
-        <p class="mt-3 max-w-md text-muted">{{ tagline }}</p>
+<header class="border-b border-line">
+    <div class="mx-auto max-w-6xl px-6 py-8">
+            <p class="mb-3 text-[11px] uppercase tracking-[0.16em] text-accent">Find your next read, tailored exactly to your preferences</p>
+            <h1 class="font-display text-6xl leading-none tracking-tighter">{{ title }}</h1>
+            <p class="mt-3 max-w-md text-muted">{{ tagline }}</p>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{{ "{:,}".format(book_count) }} books to explore</p>
     </div>
-    <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted sm:whitespace-nowrap">{{ "{:,}".format(book_count) }} books to explore</p>
 </header>
