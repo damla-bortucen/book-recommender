@@ -5,7 +5,19 @@ services:
     plan: free
     region: virginia           # next to the Neon database (us-east-1)
     autoDeploy: false          # CI triggers the deploy instead, only once tests pass
-    buildCommand: pip install -r requirements.txt
+    # Rebuild the stylesheet at deploy time. static/css/tailwind.css is also
+    # committed. Building here makes production correct regardless of anything.
+    # The pinned v4.3.1 must match the binary at the repo root; bumping one
+    # means bumping both.
+    # && between steps, so a failed download aborts the build rather than
+    # deploying without a stylesheet.
+    # install requirements, download linux tailwind lib, make downloaded file executable, build and minify
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      curl -sSLo tailwindcss
+      https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.1/tailwindcss-linux-x64 &&
+      chmod +x tailwindcss &&       
+      ./tailwindcss -i static/css/input.css -o static/css/tailwind.css --minify
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT      # locally uvicorn uses 127.0.0.1 which only accepts connections from the same machine
     envVars:
       - key: PYTHON_VERSION
