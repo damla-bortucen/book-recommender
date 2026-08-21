@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: book-recommender
+    name: bookmarked
     runtime: python
     plan: free
     region: virginia           # next to the Neon database (us-east-1)

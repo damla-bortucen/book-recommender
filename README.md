@@ -1,4 +1,4 @@
-# Book Recommender
+# BookMarked
 
 A semantic book recommendation engine. Describe the book you want in plain language —
 *"a book to teach children about nature"* and it returns matching books by comparing
@@ -192,7 +192,7 @@ uvicorn app.main:app --reload
 
 To get UI watcher running when making changes:
 ```bash
-./tailwindcss -i styles/input.css -o static/css/tailwind.css --watch
+./tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 ```
 
 ---
@@ -217,8 +217,18 @@ tests/
   test_contract.py   the 512-dimension three-way contract
   test_routes.py     route smoke tests
 render.yaml        deploy blueprint (web service, us-east-1)
-templates/         index.html + HTMX partials
-static/            generated CSS, picker JS, fallback cover
+templates/
+  index.html         the page
+  components/        header, footer — included into the page
+  _results.html      HTMX partials — returned by routes
+  _book_options.html
+  _book_detail.html
+  _macros.html       cover() and meta(), shared by the card and the modal
+static/
+  css/input.css      Tailwind source: @theme tokens + component layer
+  css/tailwind.css   generated
+  js/app.js          picker chips, tab switching, modal close
+  img/cover_NA.png   fallback cover
 NOTES.md           working notes on storage, pgvector, indexing, API behaviour
 README.md
 ```

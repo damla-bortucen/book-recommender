@@ -1,7 +1,8 @@
-{% for book in matches %}
-    <div class="option cursor-pointer rounded-md px-3 py-2 hover:bg-sky-50"
-         data-id="{{ book.hardcover_id }}" data-label="{{ book.title }}">
-        {{ book.title }}
-        {% if book.authors %}<span class="text-slate-500">— {{ book.authors | join(", ") }}</span>{% endif %}
-    </div>
-{% endfor %}
+{%- for book in matches -%}
+<div class="option" data-id="{{ book.hardcover_id }}" data-label="{{ book.title }}">
+    <span class="block leading-snug">{{ book.title }}</span>
+    {%- if book.authors %}
+    <span class="block text-xs text-muted">{{ book.authors | join(", ") }}</span>
+    {%- endif %}
+</div>
+{%- endfor %}

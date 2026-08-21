@@ -1,0 +1,94 @@
+/* Tailwind source. Build with:
+   ./tailwindcss -i static/css/input.css -o static/css/tailwind.css   */
+
+/* source(none) turns off Tailwind's automatic file detection. It matters now
+   that this file sits beside the generated tailwind.css — without it the build
+   would scan its own output. Sources are listed explicitly instead, relative
+   to this file. */
+@import "tailwindcss" source(none);
+@source "../../templates/**/*.html";
+@source "../js/**/*.js";
+
+/* The palette, in one place.
+
+   @theme is a Tailwind v4 feature: these are token definitions. 
+   Tailwind reads them at build time and generates a full set of utilities from each 
+   one — --color-accent gives you bg-accent, text-accent, border-accent, ring-accent...
+*/
+@theme {
+    --color-paper:  #f7f4ef;    /* page background */
+    --color-panel:  #fcfaf7;    /* raised surfaces: dropdown, chips, modal */
+    --color-ink:    #292522;    /* body text, buttons */
+    --color-muted:  #716a63;    /* secondary text */
+    --color-line:   #ded7cf;    /* hairline borders */
+    --color-accent: #b25d4a;    /* the one warm highlight */
+
+    --font-display: Georgia, serif;    /* headings; gives font-display */
+}
+
+/* Classes that JavaScript toggles. These exist so app.js can say which tab is
+   active without knowing that active means an accent underline.  
+*/
+@layer components {
+    .tab-btn {
+        @apply cursor-pointer border-b-2 border-transparent pb-3 text-sm
+               text-muted transition-colors hover:text-ink;
+    }
+
+    .tab-btn.is-active {
+        @apply border-accent text-ink;
+    }
+
+    /* Small uppercase text: the header eyebrow and book count today, form
+       labels and legends later. Colour stays inline — it varies per use. */
+    .label {
+        @apply text-[11px] uppercase tracking-[0.16em];
+    }
+
+    .btn {
+        @apply rounded-lg cursor-pointer bg-ink px-6 py-3 font-bold text-paper
+               transition-colors hover:bg-accent;
+    }
+
+    /* w-full: a bare <select> sizes itself to its widest <option>, and some
+       genre names are long enough to push the page wider than a phone.
+       width:100% replaces that content-based sizing with "as wide as the
+       parent", so a long option is truncated inside the control rather than
+       stretching it. */
+    .field {
+        @apply rounded-lg w-full border border-line bg-panel px-3 py-2.5 text-sm text-ink
+               focus:outline-2 focus:outline-offset-2 focus:outline-accent;
+    }
+
+    .option {
+        @apply block w-full cursor-pointer px-4 py-3 text-left hover:bg-line/40;
+    }
+
+    .chip {
+        @apply inline-flex items-center gap-1.5 rounded-full border border-line
+               bg-panel px-3 py-1 text-sm text-ink;
+    }
+
+    .chip-remove {
+        @apply cursor-pointer font-bold leading-none text-accent hover:text-ink;
+    }
+}
+
+
+/* HTMX owns the contents of #book-options, so let CSS decide when it shows
+   rather than adding JavaScript to toggle it. 
+*/
+#book-options:not(:has(*)) {
+    display: none;
+}
+
+/* htmx's built-in indicator CSS only animates opacity, so an idle spinner
+   still reserves a blank row above the results. Collapse it out of the
+   layout; htmx puts .htmx-request on the hx-indicator target mid-flight. */
+#loading {
+    display: none;
+}
+
+#loading.htmx-request {
+    display: flex;
+}

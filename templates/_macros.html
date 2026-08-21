@@ -1,0 +1,22 @@
+{# Fragments shared by _results.html and _book_detail.html, so the cover
+   fallback and the metadata line are written once rather than twice. #}
+
+{# Cover image with the placeholder fallback. Covers both cases: cover_url is
+   null, and cover_url is set but 404s at load time (hence onerror). #}
+{% macro cover(book, classes="") %}
+<img src="{{ book.cover_url or '/static/img/cover_NA.png' }}"
+     alt="Cover of {{ book.title }}"
+     loading="lazy"
+     onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
+     class="rounded-lg bg-line/60 object-cover {{ classes }}">
+{% endmacro %}
+
+{# ★ rating · N readers · year. The modal also shows the page count. #}
+{% macro meta(book, show_pages=false, classes="") %}
+<p class="text-xs text-muted {{ classes }}">
+    {% if book.rating %}<span class="text-accent">★ {{ "%.1f"|format(book.rating) }}</span> · {% endif %}
+    {{ "{:,}".format(book.users_count) }} readers
+    {% if book.release_year %} · {{ book.release_year }}{% endif %}
+    {% if show_pages and book.pages %} · {{ book.pages }} pages{% endif %}
+</p>
+{% endmacro %}

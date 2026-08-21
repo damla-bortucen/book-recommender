@@ -1,42 +1,37 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+{% import "_macros.html" as ui %}
 
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeModal()"></div>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
 
-    <div class="relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <button type="button" onclick="closeModal()"
-                class="absolute right-3 top-3 rounded-full px-2 text-2xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">&times;</button>
+    <div class="absolute inset-0 bg-ink/50 backdrop-blur-sm" onclick="closeModal()"></div>
 
-        <div class="flex flex-col gap-6 p-6 sm:flex-row">
-            <img src="{{ book.cover_url or '/static/img/cover_NA.png' }}" alt="Cover of {{ book.title }}"
-                 onerror="this.onerror=null; this.src='/static/img/cover_NA.png';"
-                 class="w-40 shrink-0 self-center rounded-lg bg-slate-100 sm:self-start">
+    <div class="relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-line bg-panel shadow-2xl shadow-ink/30">
+        <button type="button" onclick="closeModal()" aria-label="Close"
+                class="absolute right-4 top-3 cursor-pointer text-3xl leading-none text-muted hover:text-accent">&times;</button>
+
+        <div class="flex flex-col gap-8 p-8 sm:flex-row">
+            {{ ui.cover(book, "w-40 shrink-0 self-center sm:self-start") }}
 
             <div class="min-w-0 space-y-4">
                 <div>
-                    <h2 class="pr-8 text-2xl font-bold">{{ book.title }}</h2>
-                    <p class="text-slate-600">{{ book.authors | join(", ") if book.authors else "Unknown author" }}</p>
+                    <h2 class="pr-8 font-display text-3xl leading-tight">{{ book.title }}</h2>
+                    <p class="mt-1 text-muted">{{ book.authors | join(", ") if book.authors else "Unknown author" }}</p>
                 </div>
 
-                <p class="text-sm text-slate-500">
-                    {% if book.rating %}★ {{ "%.1f"|format(book.rating) }} · {% endif %}
-                    {{ "{:,}".format(book.users_count) }} readers
-                    {% if book.release_year %} · {{ book.release_year }}{% endif %}
-                    {% if book.pages %} · {{ book.pages }} pages{% endif %}
-                </p>
+                {{ ui.meta(book, show_pages=true) }}
 
-                <p class="whitespace-pre-line text-slate-700">{{ book.description }}</p>
+                <p class="whitespace-pre-line text-sm leading-relaxed text-ink/90">{{ book.description }}</p>
 
                 {% for label, tags, pill in [
-                    ("Genres", book.genres, "bg-sky-100 text-sky-800"),
-                    ("Moods", book.moods, "bg-violet-100 text-violet-800"),
-                    ("Content warnings", book.content_warnings, "bg-rose-100 text-rose-800")
+                    ("Genres", book.genres, "border-line text-ink"),
+                    ("Moods", book.moods, "border-line text-muted"),
+                    ("Content warnings", book.content_warnings, "border-accent text-accent")
                 ] %}
                     {% if tags %}
                     <div>
-                        <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ label }}</h3>
+                        <h3 class="label mb-1.5 text-muted">{{ label }}</h3>
                         <div class="flex flex-wrap gap-1">
                             {% for t in tags %}
-                            <span class="rounded-full px-2 py-1 text-xs {{ pill }}">{{ t }}</span>
+                            <span class="rounded-full border px-2 py-0.5 text-xs {{ pill }}">{{ t }}</span>
                             {% endfor %}
                         </div>
                     </div>
