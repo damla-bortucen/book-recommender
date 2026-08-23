@@ -9,7 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.recommender import RESULTS_TOP_K, POPULARITY_PRESETS
+from app.recommender import (
+    RESULTS_TOP_K,
+    POPULARITY_PRESETS,
+    MIN_SEARCH_CHARS,
+    MAX_SEARCH_CHARS,
+)
 
 
 @pytest.fixture(scope="module")     # creates the client once for the whole file to use
@@ -138,3 +143,33 @@ def test_popularity_preset_changes_the_results(client):
     differed = [q for q in queries if ids(q, "gems") != ids(q, "popular")]
     assert differed, "gems and popular returned identical results for every query"
 
+
+@pytest.mark.parametrize("query", ["", " ", "a" * (MIN_SEARCH_CHARS - 1)])
+def test_too_short_a_query_is_answered(client, query):
+    """
+    An empty or too-short query must have a response.
+    """
+
+    response = client.post(
+        "/search",
+        data={"query": query, "genre": "All", "mood": "All", "popularity": "balanced"},
+    )
+    assert response.status_code == 200
+    assert "<article" not in response.text          # nothing was searched
+    assert "few more words" in response.text        # and the user is told why
+
+
+def test_oversized_query_is_truncated(client):
+    """
+    The embedding API truncates input past MAX_SEARCH_CHARS.
+    """
+
+    response = client.post(
+        "/search",
+        data={
+            "query": "a lonely lighthouse keeper " * (MAX_SEARCH_CHARS // 5),
+            "genre": "All", "mood": "All", "popularity": "balanced",
+        },
+    )
+    assert response.status_code == 200
+    assert response.text.count("<article") == RESULTS_TOP_K
