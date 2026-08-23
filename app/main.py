@@ -8,6 +8,7 @@ from app.recommender import (
     POPULARITY_WEIGHT,
     MIN_TYPEAHEAD_CHARS,
     MIN_SEARCH_CHARS,
+    MAX_SEARCH_CHARS,
 )
 
 app = FastAPI() # the application object
@@ -32,6 +33,7 @@ def home(request: Request):
             "popularity_presets": list(POPULARITY_PRESETS),
             "popularity_default": "balanced",
             "min_search_chars": MIN_SEARCH_CHARS,   # drives the input's minlength
+            "max_search_chars": MAX_SEARCH_CHARS,   # and its maxlength
         },
     )
 
@@ -48,7 +50,9 @@ def search(
     mood: str = Form("All"),
     popularity: str = Form("balanced"),
 ):
-    query = query.strip()
+    # Truncate rather than refuse: maxlength on the input means a real user
+    # never gets here
+    query = query.strip()[:MAX_SEARCH_CHARS]
     if len(query) < MIN_SEARCH_CHARS:
         return templates.TemplateResponse(
             request,

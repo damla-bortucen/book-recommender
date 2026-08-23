@@ -33,7 +33,7 @@
 
                 <label class="sr-only" for="query">Describe a book you would like</label>
                 <input type="text" id="query" name="query" placeholder="Describe a book you'd like…"
-                    required minlength="{{ min_search_chars }}"
+                    required minlength="{{ min_search_chars }}" maxlength="{{ max_search_chars }}"
                     class="w-full border-0 border-b-2 border-line bg-transparent py-3 font-display text-2xl
                            placeholder:text-muted/60 focus:border-accent focus:outline-none sm:text-2xl">
 
