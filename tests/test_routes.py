@@ -173,3 +173,25 @@ def test_oversized_query_is_truncated(client):
     )
     assert response.status_code == 200
     assert response.text.count("<article") == RESULTS_TOP_K
+
+
+def test_typeahead_says_when_nothing_matches(client):
+    """
+    An empty render leaves the dropdown hidden by CSS.
+    Message: nothing matches.
+    """
+
+    response = client.get("/book-search", params={"q": "zzzznotarealtitle"})
+    assert response.status_code == 200
+    assert 'class="option"' not in response.text
+    assert "No title matches" in response.text
+
+
+def test_typeahead_stays_quiet_below_threshold(client):
+    """
+    Too few characters doesnt render anything. 
+    """
+
+    response = client.get("/book-search", params={"q": "a"})
+    assert response.status_code == 200
+    assert response.text.strip() == ""
