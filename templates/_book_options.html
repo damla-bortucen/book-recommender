@@ -5,4 +5,8 @@
     <span class="block text-xs text-muted">{{ book.authors | join(", ") }}</span>
     {%- endif %}
 </div>
+{%- else -%}
+    {%- if searched %}
+    <p class="px-4 py-3 text-sm text-muted">No title matches “{{ q }}”.</p>
+    {%- endif -%}
 {%- endfor %}

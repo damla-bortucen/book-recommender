@@ -2,7 +2,12 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from app.recommender import BookRecommender, POPULARITY_PRESETS, POPULARITY_WEIGHT
+from app.recommender import (
+    BookRecommender,
+    POPULARITY_PRESETS,
+    POPULARITY_WEIGHT,
+    MIN_QUERY_CHARS,
+)
 
 app = FastAPI() # the application object
 # tell FastAPI where the template files live
@@ -53,7 +58,11 @@ def book_search(request: Request, q: str = ""):
     return templates.TemplateResponse(
         request,
         "_book_options.html",
-        {"matches": matches},
+        # `searched` separates "no matches" from "not enough typed yet" — the
+        # template needs to say nothing in the second case, and the engine's
+        # threshold is the one that decides
+        {"matches": matches, "q": q.strip(),
+         "searched": len(q.strip()) >= MIN_QUERY_CHARS},
     )
 
 
