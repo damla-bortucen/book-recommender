@@ -15,7 +15,8 @@ load_dotenv()
 EMBED_MODEL = "text-embedding-3-small"
 EMBED_DIMENSIONS = 512      # must match the VECTOR(512) column
 RESULTS_TOP_K = 8
-MIN_QUERY_CHARS = 2         # below this the typeahead doesn't search at all
+MIN_TYPEAHEAD_CHARS = 2     # for find by books
+MIN_SEARCH_CHARS = 3        # for search by description
 POPULARITY_WEIGHT = 0.05    # how strongly reader count nudges the ranking
 CANDIDATE_POOL = 200
 
@@ -179,7 +180,7 @@ class BookRecommender:
         # match the fold applied to the column, so a curly ’ typed by the user
         # (macOS smart quotes) still matches a straight-quoted title
         query = query.strip().replace("\u2019", "'").replace("\u2018", "'")
-        if len(query) < MIN_QUERY_CHARS:
+        if len(query) < MIN_TYPEAHEAD_CHARS:
             return []
 
         params = {"pattern": f"%{query}%", "limit": limit}

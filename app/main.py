@@ -6,7 +6,8 @@ from app.recommender import (
     BookRecommender,
     POPULARITY_PRESETS,
     POPULARITY_WEIGHT,
-    MIN_QUERY_CHARS,
+    MIN_TYPEAHEAD_CHARS,
+    MIN_SEARCH_CHARS,
 )
 
 app = FastAPI() # the application object
@@ -29,7 +30,8 @@ def home(request: Request):
             "genres": ["All"] + recommender.genres,
             "moods": ["All"] + recommender.moods,
             "popularity_presets": list(POPULARITY_PRESETS),
-            "popularity_default": "balanced"
+            "popularity_default": "balanced",
+            "min_search_chars": MIN_SEARCH_CHARS,   # drives the input's minlength
         },
     )
 
@@ -38,11 +40,22 @@ def home(request: Request):
 @app.post("/search")
 def search(
     request: Request,
-    query: str = Form(...),
+    # Form("") rather than Form(...): a required field 422s on an empty submit.
+    # So clicking Search with an empty box does nothing with Form(...).
+    # Answer with with message instead.
+    query: str = Form(""),
     genre: str = Form("All"),
     mood: str = Form("All"),
     popularity: str = Form("balanced"),
-): 
+):
+    query = query.strip()
+    if len(query) < MIN_SEARCH_CHARS:
+        return templates.TemplateResponse(
+            request,
+            "_results.html",
+            {"books": [], "notice": "Describe what you're after in a few more words."},
+        )
+
     weight = POPULARITY_PRESETS.get(popularity, POPULARITY_WEIGHT)      # rejects anything not on dict (fallback)
     results = recommender.recommend_from_query(query, genre=genre, mood=mood, weight=weight)
     return templates.TemplateResponse(
@@ -62,7 +75,7 @@ def book_search(request: Request, q: str = ""):
         # template needs to say nothing in the second case, and the engine's
         # threshold is the one that decides
         {"matches": matches, "q": q.strip(),
-         "searched": len(q.strip()) >= MIN_QUERY_CHARS},
+         "searched": len(q.strip()) >= MIN_TYPEAHEAD_CHARS},
     )
 
 

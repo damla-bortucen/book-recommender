@@ -25,7 +25,8 @@
 
     </article>
 {% else %}
+    {# notice is set when the route declined to search at all (query too short) otherwise it searched and found nothing #}
     <p class="col-span-full border-y border-line py-14 text-center text-muted">
-        No matches found. Try a broader description, or set the filters back to “All”.
+        {{ notice or "No matches found. Try a broader description, or set the filters back to “All”." }}
     </p>
 {% endfor %}
