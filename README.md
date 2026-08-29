@@ -84,7 +84,6 @@ Hardcover GraphQL API  ──▶  books (Postgres + pgvector)  ──▶  FastAP
 
 The measurements behind these choices are in [NOTES.md](NOTES.md).
 
-
 ### 1. Ingest - `data_ingest/hardcover.py`
 
 Pages the full Hardcover catalogue, keeping books with a description and **at least 25 readers**.
@@ -93,12 +92,10 @@ Hardcover's `cached_tags` are split into `genres`, `moods`, and `content_warning
 ordered most-applied first.
 Re-running the script refreshes the catalogue instead of duplicating it.
 
-
 ### 2. Embed - `data_ingest/embeddings.py`
 
 Each book is represented as `title / authors / description` and embedded with a
 `text-embedding-3-small` vector at **512 dimensions**, stored in the `embedding` column.
-
 
 ### 3. Search - `app/recommender.py` + `app/queries.py`
 
@@ -126,7 +123,6 @@ or mood narrows the candidate pool rather than shrinking the final eight.
 **Find by books** averages the picked books' stored vectors and searches with the result,
 excluding the picks from their own results.
 
-
 ### 4. Web app - `app/main.py`
 
 FastAPI serving Jinja templates (`_results.html`, `_book_options.html`, `_book_detail.html`) with [HTMX](https://htmx.org/), 
@@ -137,7 +133,6 @@ No build step. Routes return HTML fragments that get swapped into the page.
 - **Find by books** — a debounced title typeahead (`ILIKE`, most-read first); pick up to
   three and get recommendations from your average taste vector.
 - Results render as a cover gallery, falling back to a placeholder when a book has no cover.
-
 
 ### 5. Refresh - `.github/workflows/refresh-catalogue.yml`
 
@@ -154,7 +149,6 @@ It re-fetches everything rather than syncing incrementally in a 7-day window.
 Full run: 62 requests, about 3 minutes.
 
 `DATABASE_URL`, `OPENAI_API_KEY` and `HARDCOVER_TOKEN` are stored as repository secrets.
-
 
 ### 6. Ship - `.github/workflows/ci.yml` + `render.yaml`
 
@@ -186,14 +180,13 @@ secrets as the refresh workflow.
 
 ## Setup
 
-**1. Install dependencies**
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-
-**2. Create `.env` in the project root**
+### 2. Create `.env` in the project root
 
 ```
 DATABASE_URL=postgresql://user@localhost:5432/books
@@ -204,30 +197,31 @@ HARDCOVER_TOKEN=...
 Hardcover's token already includes the `Bearer ` prefix — don't add a second one, or you
 get "Unable to verify token", which reads like an expired key.
 
+### 3. Create the table
 
-**3. Create the table** (needs Postgres with the `vector` extension available)
+Needs a Postgres with the `vector` extension available.
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
 ```
 
-
-**4. Load the catalogue, then embed it**
+### 4. Load the catalogue, then embed it
 
 ```bash
 python -m data_ingest.hardcover     # ~60k books, rate-limited to 60 req/min
 python -m data_ingest.embeddings    # batches of 200; safe to interrupt and resume
 ```
 
+### 5. Build the indexes
 
-**5. Build the indexes** — after the load, not before
+After the load, not before: indexing 60k rows once is far cheaper than 60k
+incremental index updates, and a missing index only makes queries slow, never wrong.
 
 ```bash
 psql "$DATABASE_URL" -f db/indexes.sql
 ```
 
-
-**6. Build the stylesheet**
+### 6. Build the stylesheet
 
 `static/css/tailwind.css` is generated and **not committed**, so a fresh clone has no
 CSS until you build it. Render runs the same build at deploy time.
@@ -243,8 +237,7 @@ chmod +x tailwindcss
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css
 ```
 
-
-**7. Run it**
+### 7. Run it
 
 ```bash
 uvicorn app.main:app --reload
@@ -265,9 +258,15 @@ rebuild:
 - use `content_warnings` as an exclusion filter
 - a personal shelf (TBR) — the first feature that would need writes
 
+---
+
 ## Acknowledgements
+
 Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);
 the data source, storage layer, and web app have since been rebuilt.
 
+---
+
 ## License
+
 MIT — see [LICENSE](LICENSE).
