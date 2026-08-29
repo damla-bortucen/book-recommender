@@ -8,6 +8,7 @@ __pycache__/
 .env
 
 CLAUDE.md
+skills-lock.json
 
 run_overnight.log
 tailwindcss
