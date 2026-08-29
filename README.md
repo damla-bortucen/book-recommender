@@ -1,4 +1,37 @@
-![BookMarked — Find your next read by describing it.](https://shieldcn.dev/header/surface.svg?title=BookMarked&subtitle=Find+your+next+read+by+describing+it.&align=left&bg=f7f4ef&titleColor=292522&subtitleColor=716a63&radius=12&width=750&height=200)
+<p align="center">
+  <img alt="header" src="https://shieldcn.dev/header/grid.svg?title=BookMarked&subtitle=Find+your+next+read+by+describing+it.&size=wide&border=false&bg=f7f4ef&titleColor=292522&subtitleColor=716a63&font=serif" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/damla-bortucen/bookmarked/actions/workflows/ci.yml">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=outline&size=sm&mode=dark" />
+      <img alt="CI status" src="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=outline&size=sm&mode=light" />
+    </picture>
+  </a>
+  <a href="https://github.com/damla-bortucen/bookmarked/commits">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
+      <img alt="Last commit" src="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
+    </picture>
+  </a>
+  <a href="https://github.com/damla-bortucen/bookmarked/issues">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
+      <img alt="Open issues" src="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
+    </picture>
+  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=dark" />
+    <img alt="Python 3.12" src="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=light" />
+  </picture>
+  <a href="https://github.com/damla-bortucen/bookmarked/blob/main/LICENSE">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
+      <img alt="License: MIT" src="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
+    </picture>
+  </a>
+</p>
 
 A semantic book recommendation engine. Describe the book you want in plain language —
 *"a book to teach children about nature"* and it returns matching books by comparing
@@ -11,36 +44,6 @@ pgvector**, served by **FastAPI + HTMX**.
 **[Live demo →](https://bookmarked-qktw.onrender.com)**
 *Hosted on Render's free tier, so the first request after a quiet spell takes a minute to wake.*
 
-<p align="center">
-  <a href="https://github.com/damla-bortucen/bookmarked/actions/workflows/ci.yml">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=ghost&size=sm&mode=dark" />
-      <img alt="CI status" src="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=ghost&size=sm&mode=light" />
-    </picture>
-  </a>
-  <a href="https://github.com/damla-bortucen/bookmarked/commits">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=dark" />
-      <img alt="Last commit" src="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=light" />
-    </picture>
-  </a>
-  <a href="https://github.com/damla-bortucen/bookmarked/issues">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=dark" />
-      <img alt="Open issues" src="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=light" />
-    </picture>
-  </a>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=ghost&size=sm&mode=dark" />
-    <img alt="Python 3.12" src="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=ghost&size=sm&mode=light" />
-  </picture>
-  <a href="https://github.com/damla-bortucen/bookmarked/blob/main/LICENSE">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=dark" />
-      <img alt="License: MIT" src="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=ghost&size=sm&mode=light" />
-    </picture>
-  </a>
-</p>
 
 Or run it locally:
 
