@@ -15,12 +15,6 @@
       <img alt="Last commit" src="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
     </picture>
   </a>
-  <a href="https://github.com/damla-bortucen/bookmarked/issues">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
-      <img alt="Open issues" src="https://shieldcn.dev/github/issues/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
-    </picture>
-  </a>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=dark" />
     <img alt="Python 3.12" src="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=light" />
@@ -33,6 +27,8 @@
   </a>
 </p>
 
+## About
+
 A semantic book recommendation engine. Describe the book you want in plain language —
 *"a book to teach children about nature"* and it returns matching books by comparing
 your phrasing against ~60k book descriptions in vector space. Or pick up to three books
@@ -42,39 +38,66 @@ Built on the [Hardcover](https://hardcover.app) catalogue, stored in **Postgres 
 pgvector**, served by **FastAPI + HTMX**.
 
 **[Live demo →](https://bookmarked-qktw.onrender.com)**
-*Hosted on Render's free tier, so the first request after a quiet spell takes a minute to wake.*
+*Hosted on Render's free tier, so the first request takes a minute to wake.*
 
+<!-- Screenshot of the search page goes here, e.g.
+     ![The BookMarked search page](static/img/screenshot.png)
+     The demo sleeps on Render's free tier; an image doesn't. -->
 
-Or run it locally:
+To run it yourself, see [Setup](#setup).
 
-```bash
-uvicorn app.main:app --reload
-```
+<details open="open">
+<summary>Table of Contents</summary>
+
+- [About](#about)
+- [Tech stack](#tech-stack)
+- [How it works](#how-it-works)
+- [Setup](#setup)
+- [Roadmap](#roadmap)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
+
+</details>
+
+---
+
+## Tech stack
+
+- **Python 3.12**
+- **Postgres + [pgvector](https://github.com/pgvector/pgvector)** - books and embeddings in one table
+- **psycopg 3** — connection pooling, named-parameter SQL
+- **OpenAI `text-embedding-3-small`** — 512-dimension embeddings
+- **[Hardcover](https://hardcover.app) GraphQL API** — source catalogue
+- **FastAPI + Uvicorn** — web app and server
+- **HTMX + Jinja2** — server-rendered, dynamic UI (no SPA build)
+- **Tailwind CSS** - styling, via the standalone CLIyee
 
 ---
 
 ## How it works
 
-There's one table and a row contains the book information and its vector.
+One table. Each row holds a book and its embedding.
 
 ```
 Hardcover GraphQL API  ──▶  books (Postgres + pgvector)  ──▶  FastAPI + HTMX
 ```
 
-### 1. Ingest — `data_ingest/hardcover.py`
+The measurements behind these choices are in [NOTES.md](NOTES.md).
+
+### 1. Ingest - `data_ingest/hardcover.py`
 
 Pages the full Hardcover catalogue, keeping books with a description and **at least 25 readers**.
 
 Hardcover's `cached_tags` are split into `genres`, `moods`, and `content_warnings` arrays,
-ordered most-applied first. 
+ordered most-applied first.
 Re-running the script refreshes the catalogue instead of duplicating it.
 
-### 2. Embed — `data_ingest/embeddings.py`
+### 2. Embed - `data_ingest/embeddings.py`
 
 Each book is represented as `title / authors / description` and embedded with a
 `text-embedding-3-small` vector at **512 dimensions**, stored in the `embedding` column.
 
-### 3. Search — `app/recommender.py` + `app/queries.py`
+### 3. Search - `app/recommender.py` + `app/queries.py`
 
 Every search is **two stages in one query**:
 
@@ -93,26 +116,26 @@ ORDER BY similarity + %(weight)s * ln(1 + users_count) DESC
 LIMIT 8;
 ```
 
-The `ln()` is used because otherwise reader counts (spanning 25 → 18,341) overpower the similarity
-ranking completely. Log compresses the range so popularity only has a slight impact on results.
+Reader counts span 25 → 18,341, so without the `ln()` popularity would swamp similarity
+entirely; the log compresses that range into a nudge. Filtering in stage 1 means a genre
+or mood narrows the candidate pool rather than shrinking the final eight.
 
-Filter in stage 1, so a genre or mood narrows the candidate pool rather than
-shrinking the final eight.
+**Find by books** averages the picked books' stored vectors and searches with the result,
+excluding the picks from their own results.
 
-**Find by books** fetches the picked books' stored vectors, averages them in Python,
-and searches with the result, excluding the picks from their own results.
+### 4. Web app - `app/main.py`
 
-### 4. Web app — `app/main.py`
+FastAPI serving Jinja templates (`_results.html`, `_book_options.html`, `_book_detail.html`) with [HTMX](https://htmx.org/), 
+styled with Tailwind.
+No build step. Routes return HTML fragments that get swapped into the page.
 
-FastAPI serving Jinja templates with [HTMX](https://htmx.org/), styled with Tailwind.
-No build step, no SPA — routes return HTML fragments that get swapped into the page.
-
-- **Search by description** - free-text query, optional genre and mood filters.
-- **Find by books** - a debounced title typeahead (`ILIKE`, most-read first); pick up to
+- **Search by description** — free-text query, optional genre and mood filters.
+- **Find by books** — a debounced title typeahead (`ILIKE`, most-read first); pick up to
   three and get recommendations from your average taste vector.
 - Results render as a cover gallery, falling back to a placeholder when a book has no cover.
 
-### 5. Refresh — `.github/workflows/refresh-catalogue.yml`
+
+### 5. Refresh - `.github/workflows/refresh-catalogue.yml`
 
 The catalogue goes stale, so a scheduled GitHub Action re-runs the pipeline weekly:
 
@@ -123,26 +146,15 @@ on:
   workflow_dispatch: {}    # plus a "Run workflow" button
 ```
 
-Both steps run unchanged:
-
-```bash
-python -m data_ingest.hardcover     # upsert, so re-running refreshes
-python -m data_ingest.embeddings    # only books whose vector is NULL
-```
-
 It re-fetches everything rather than syncing incrementally in a 7-day window.
 Full run: 62 requests, about 3 minutes.
 
 `DATABASE_URL`, `OPENAI_API_KEY` and `HARDCOVER_TOKEN` are stored as repository secrets.
 
-> Scheduled workflows are disabled after 60 days of repository inactivity.
-
-### 6. Ship — `.github/workflows/ci.yml` + `render.yaml`
+### 6. Ship - `.github/workflows/ci.yml` + `render.yaml`
 
 ```
-PR ──▶ tests ──┐
-               ├──▶ merge to main ──▶ tests ──▶ deploy hook ──▶ Render
-               ┘
+PR ──▶ tests ──▶ merge to main ──▶ tests ──▶ deploy hook ──▶ Render
 ```
 
 Tests run on every pull request and on `main`. The deploy job `needs` the test
@@ -164,19 +176,6 @@ secrets as the refresh workflow.
 | --- | --- |
 | `tests/test_contract.py` | `EMBED_DIMENSIONS`, `DIMENSIONS` and `VECTOR(512)` still agree |
 | `tests/test_routes.py` | every route returns what the templates expect |
-
----
-
-## Tech stack
-
-- **Python 3.12**
-- **Postgres + [pgvector](https://github.com/pgvector/pgvector)** — books and embeddings in one table
-- **psycopg 3** — connection pooling, named-parameter SQL
-- **OpenAI `text-embedding-3-small`** — 512-dimension embeddings
-- **[Hardcover](https://hardcover.app) GraphQL API** — source catalogue
-- **FastAPI + Uvicorn** — web app and server
-- **HTMX + Jinja2** — server-rendered, dynamic UI (no SPA build)
-- **Tailwind CSS** — styling, via the standalone CLI
 
 ---
 
@@ -224,7 +223,8 @@ psql "$DATABASE_URL" -f db/indexes.sql
 CSS until you build it. Render runs the same build at deploy time.
 
 The standalone CLI is gitignored too — grab **v4.3.1**, matching the version pinned in
-`render.yaml`:
+`render.yaml`. The URL below is the macOS arm64 build; swap the asset name for
+`tailwindcss-linux-x64` or `tailwindcss-macos-x64` depending on your device:
 
 ```bash
 curl -sSLo tailwindcss \
@@ -247,57 +247,16 @@ rebuild:
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 ```
 
-Stop the watcher before switching branches or pulling — it reads git's rewrites as edits
-and rebuilds against whatever lands on disk.
-
 ---
 
-## Project layout
+## Roadmap
 
-```
-app/
-  main.py          FastAPI routes
-  recommender.py   BookRecommender — connection pool, embedding, search
-  queries.py       all SQL, as named constants
-data_ingest/
-  hardcover.py     catalogue → Postgres (re-runnable upsert)
-  embeddings.py    descriptions → vectors (resumable)
-db/
-  schema.sql       table + pgvector extension
-  indexes.sql      B-tree / GIN / HNSW, built after loading
-.github/workflows/
-  refresh-catalogue.yml   weekly re-run of both ingest scripts
-  ci.yml                  tests on PRs; deploys main once they pass
-tests/
-  test_contract.py   the 512-dimension three-way contract
-  test_routes.py     route smoke tests
-render.yaml        deploy blueprint (web service, us-east-1)
-templates/
-  index.html         the page
-  components/        header, footer — included into the page
-  _results.html      HTMX partials — returned by routes
-  _book_options.html
-  _book_detail.html
-  _macros.html       cover() and meta(), shared by the card and the modal
-static/
-  css/input.css      Tailwind source: @theme tokens + component layer
-  css/tailwind.css   generated, gitignored — build it (step 6)
-  js/app.js          picker chips, tab switching, modal close
-  img/cover_NA.png   fallback cover
-NOTES.md           working notes on storage, pgvector, indexing, API behaviour
-README.md
-```
-
----
-
-## Future improvements
-
-- offline evaluation — measure recommendation quality, and test whether the
-  popularity weight and 512 dimensions actually earn their place
-- let the popularity weight be tuned from the UI
 - use `content_warnings` as an exclusion filter
 - a personal shelf (TBR) — the first feature that would need writes
 
-###### Acknowledgments
+## Acknowledgements
 Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);
 the data source, storage layer, and web app have since been rebuilt.
+
+## License
+MIT — see [LICENSE](LICENSE).
