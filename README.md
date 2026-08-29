@@ -59,7 +59,11 @@ To run it yourself, see [Setup](#setup).
 
 </details>
 
+<br>
+
 ---
+
+<br>
 
 ## Tech stack
 
@@ -72,7 +76,11 @@ To run it yourself, see [Setup](#setup).
 - **HTMX + Jinja2** - server-rendered, dynamic UI (no SPA build)
 - **Tailwind CSS** - styling, via the standalone CLIyee
 
+<br>
+
 ---
+
+<br>
 
 ## How it works
 
@@ -176,7 +184,11 @@ secrets as the refresh workflow.
 | `tests/test_contract.py` | `EMBED_DIMENSIONS`, `DIMENSIONS` and `VECTOR(512)` still agree |
 | `tests/test_routes.py` | every route returns what the templates expect |
 
+<br>
+
 ---
+
+<br>
 
 ## Setup
 
@@ -251,21 +263,33 @@ rebuild:
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 ```
 
+<br>
+
 ---
+
+<br>
 
 ## Roadmap
 
 - use `content_warnings` as an exclusion filter
 - a personal shelf (TBR) — the first feature that would need writes
 
+<br>
+
 ---
+
+<br>
 
 ## Acknowledgements
 
 Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);
 the data source, storage layer, and web app have since been rebuilt.
 
+<br>
+
 ---
+
+<br>
 
 ## License
 
