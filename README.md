@@ -40,7 +40,9 @@ pgvector**, served by **FastAPI + HTMX**.
 **[Live demo →](https://bookmarked-qktw.onrender.com)**
 *Hosted on Render's free tier, so the first request takes a minute to wake.*
 
-![The BookMarked search page: a description box, genre and mood filters, and a popularity toggle](static/img/screenshot.png)
+*A walkthrough of the live app:*
+
+https://github.com/user-attachments/assets/23bdfb9d-5306-4927-9473-6dbcee93bdd4
 
 To run it yourself, see [Setup](#setup).
 
@@ -82,6 +84,7 @@ Hardcover GraphQL API  ──▶  books (Postgres + pgvector)  ──▶  FastAP
 
 The measurements behind these choices are in [NOTES.md](NOTES.md).
 
+
 ### 1. Ingest - `data_ingest/hardcover.py`
 
 Pages the full Hardcover catalogue, keeping books with a description and **at least 25 readers**.
@@ -90,10 +93,12 @@ Hardcover's `cached_tags` are split into `genres`, `moods`, and `content_warning
 ordered most-applied first.
 Re-running the script refreshes the catalogue instead of duplicating it.
 
+
 ### 2. Embed - `data_ingest/embeddings.py`
 
 Each book is represented as `title / authors / description` and embedded with a
 `text-embedding-3-small` vector at **512 dimensions**, stored in the `embedding` column.
+
 
 ### 3. Search - `app/recommender.py` + `app/queries.py`
 
@@ -120,6 +125,7 @@ or mood narrows the candidate pool rather than shrinking the final eight.
 
 **Find by books** averages the picked books' stored vectors and searches with the result,
 excluding the picks from their own results.
+
 
 ### 4. Web app - `app/main.py`
 
@@ -148,6 +154,7 @@ It re-fetches everything rather than syncing incrementally in a 7-day window.
 Full run: 62 requests, about 3 minutes.
 
 `DATABASE_URL`, `OPENAI_API_KEY` and `HARDCOVER_TOKEN` are stored as repository secrets.
+
 
 ### 6. Ship - `.github/workflows/ci.yml` + `render.yaml`
 
@@ -185,6 +192,7 @@ secrets as the refresh workflow.
 pip install -r requirements.txt
 ```
 
+
 **2. Create `.env` in the project root**
 
 ```
@@ -196,11 +204,13 @@ HARDCOVER_TOKEN=...
 Hardcover's token already includes the `Bearer ` prefix — don't add a second one, or you
 get "Unable to verify token", which reads like an expired key.
 
+
 **3. Create the table** (needs Postgres with the `vector` extension available)
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
 ```
+
 
 **4. Load the catalogue, then embed it**
 
@@ -209,11 +219,13 @@ python -m data_ingest.hardcover     # ~60k books, rate-limited to 60 req/min
 python -m data_ingest.embeddings    # batches of 200; safe to interrupt and resume
 ```
 
+
 **5. Build the indexes** — after the load, not before
 
 ```bash
 psql "$DATABASE_URL" -f db/indexes.sql
 ```
+
 
 **6. Build the stylesheet**
 
@@ -230,6 +242,7 @@ curl -sSLo tailwindcss \
 chmod +x tailwindcss
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css
 ```
+
 
 **7. Run it**
 
