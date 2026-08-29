@@ -29,7 +29,7 @@
 
 ## About
 
-A semantic book recommendation engine. Describe the book you want in plain language —
+A semantic book recommendation engine. Describe the book you want in plain language -
 *"a book to teach children about nature"* and it returns matching books by comparing
 your phrasing against ~60k book descriptions in vector space. Or pick up to three books
 you already love and get recommendations from the average of their vectors.
@@ -59,11 +59,7 @@ To run it yourself, see [Setup](#setup).
 
 </details>
 
-<br>
-
 ---
-
-<br>
 
 ## Tech stack
 
@@ -76,11 +72,7 @@ To run it yourself, see [Setup](#setup).
 - **HTMX + Jinja2** - server-rendered, dynamic UI (no SPA build)
 - **Tailwind CSS** - styling, via the standalone CLIyee
 
-<br>
-
 ---
-
-<br>
 
 ## How it works
 
@@ -137,8 +129,8 @@ FastAPI serving Jinja templates (`_results.html`, `_book_options.html`, `_book_d
 styled with Tailwind.
 No build step. Routes return HTML fragments that get swapped into the page.
 
-- **Search by description** — free-text query, optional genre and mood filters.
-- **Find by books** — a debounced title typeahead (`ILIKE`, most-read first); pick up to
+- **Search by description** - free-text query, optional genre and mood filters.
+- **Find by books** - a debounced title typeahead (`ILIKE`, most-read first); pick up to
   three and get recommendations from your average taste vector.
 - Results render as a cover gallery, falling back to a placeholder when a book has no cover.
 
@@ -165,7 +157,7 @@ PR ──▶ tests ──▶ merge to main ──▶ tests ──▶ deploy hook
 ```
 
 Tests run on every pull request and on `main`. The deploy job `needs` the test
-job, so a failing suite means no deploy at all — rather than a red build sitting
+job, so a failing suite means no deploy at all - rather than a red build sitting
 next to a broken live site.
 
 ```yaml
@@ -175,8 +167,8 @@ deploy:
 ```
 
 Render's `autoDeploy` is **off**; deploys are triggered by a hook from CI, not
-by the push itself. The tests are integration tests — importing `app.main` opens
-a real connection pool — so CI uses the same `DATABASE_URL` and `OPENAI_API_KEY`
+by the push itself. The tests are integration tests - importing `app.main` opens
+a real connection pool - so CI uses the same `DATABASE_URL` and `OPENAI_API_KEY`
 secrets as the refresh workflow.
 
 | Test file | Covers |
@@ -184,11 +176,7 @@ secrets as the refresh workflow.
 | `tests/test_contract.py` | `EMBED_DIMENSIONS`, `DIMENSIONS` and `VECTOR(512)` still agree |
 | `tests/test_routes.py` | every route returns what the templates expect |
 
-<br>
-
 ---
-
-<br>
 
 ## Setup
 
@@ -206,7 +194,7 @@ OPENAI_API_KEY=sk-...
 HARDCOVER_TOKEN=...
 ```
 
-Hardcover's token already includes the `Bearer ` prefix — don't add a second one, or you
+Hardcover's token already includes the `Bearer ` prefix - don't add a second one, or you
 get "Unable to verify token", which reads like an expired key.
 
 ### 3. Create the table
@@ -238,7 +226,7 @@ psql "$DATABASE_URL" -f db/indexes.sql
 `static/css/tailwind.css` is generated and **not committed**, so a fresh clone has no
 CSS until you build it. Render runs the same build at deploy time.
 
-The standalone CLI is gitignored too — grab **v4.3.1**, matching the version pinned in
+The standalone CLI is gitignored too - grab **v4.3.1**, matching the version pinned in
 `render.yaml`. The URL below is the macOS arm64 build; swap the asset name for
 `tailwindcss-linux-x64` or `tailwindcss-macos-x64` depending on your device:
 
@@ -263,34 +251,22 @@ rebuild:
 ./tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 ```
 
-<br>
-
 ---
-
-<br>
 
 ## Roadmap
 
 - use `content_warnings` as an exclusion filter
-- a personal shelf (TBR) — the first feature that would need writes
-
-<br>
+- a personal shelf (TBR) - the first feature that would need writes
 
 ---
-
-<br>
 
 ## Acknowledgements
 
 Started from ["Build a Semantic Book Recommender with LLMs"](https://www.youtube.com/watch?v=Q7mS1VHm3Yw);
 the data source, storage layer, and web app have since been rebuilt.
 
-<br>
-
 ---
-
-<br>
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
