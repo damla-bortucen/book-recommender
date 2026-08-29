@@ -40,9 +40,7 @@ pgvector**, served by **FastAPI + HTMX**.
 **[Live demo →](https://bookmarked-qktw.onrender.com)**
 *Hosted on Render's free tier, so the first request takes a minute to wake.*
 
-<!-- Screenshot of the search page goes here, e.g.
-     ![The BookMarked search page](static/img/screenshot.png)
-     The demo sleeps on Render's free tier; an image doesn't. -->
+![The BookMarked search page: a description box, genre and mood filters, and a popularity toggle](static/img/screenshot.png)
 
 To run it yourself, see [Setup](#setup).
 
@@ -65,11 +63,11 @@ To run it yourself, see [Setup](#setup).
 
 - **Python 3.12**
 - **Postgres + [pgvector](https://github.com/pgvector/pgvector)** - books and embeddings in one table
-- **psycopg 3** — connection pooling, named-parameter SQL
-- **OpenAI `text-embedding-3-small`** — 512-dimension embeddings
-- **[Hardcover](https://hardcover.app) GraphQL API** — source catalogue
-- **FastAPI + Uvicorn** — web app and server
-- **HTMX + Jinja2** — server-rendered, dynamic UI (no SPA build)
+- **psycopg 3** - connection pooling, named-parameter SQL
+- **OpenAI** `text-embedding-3-small` - 512-dimension embeddings
+- **[Hardcover](https://hardcover.app) GraphQL API** - source catalogue
+- **FastAPI + Uvicorn** - web app and server
+- **HTMX + Jinja2** - server-rendered, dynamic UI (no SPA build)
 - **Tailwind CSS** - styling, via the standalone CLIyee
 
 ---
