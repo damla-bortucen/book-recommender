@@ -5,24 +5,24 @@
 <p align="center">
   <a href="https://github.com/damla-bortucen/bookmarked/actions/workflows/ci.yml">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=outline&size=sm&mode=dark" />
-      <img alt="CI status" src="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=outline&size=sm&mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=secondary&size=sm&mode=dark" />
+      <img alt="CI status" src="https://shieldcn.dev/github/ci/damla-bortucen/bookmarked.svg?workflow=ci.yml&branch=main&variant=secondary&size=sm&mode=light" />
     </picture>
   </a>
   <a href="https://github.com/damla-bortucen/bookmarked/commits">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
-      <img alt="Last commit" src="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=secondary&size=sm&mode=dark" />
+      <img alt="Last commit" src="https://shieldcn.dev/github/last-commit/damla-bortucen/bookmarked.svg?variant=secondary&size=sm&mode=light" />
     </picture>
   </a>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=dark" />
-    <img alt="Python 3.12" src="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=outline&size=sm&mode=light" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=secondary&size=sm&mode=dark" />
+    <img alt="Python 3.12" src="https://shieldcn.dev/badge/python-3.12-blue.svg?logo=python&variant=secondary&size=sm&mode=light" />
   </picture>
   <a href="https://github.com/damla-bortucen/bookmarked/blob/main/LICENSE">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=dark" />
-      <img alt="License: MIT" src="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=outline&size=sm&mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=secondary&size=sm&mode=dark" />
+      <img alt="License: MIT" src="https://shieldcn.dev/github/license/damla-bortucen/bookmarked.svg?variant=secondary&size=sm&mode=light" />
     </picture>
   </a>
 </p>
